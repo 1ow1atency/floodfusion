@@ -31,6 +31,10 @@ research question.
 - Model selection and tuning use the validation split only.
 - Normalisation statistics are computed from the **train split only**, saved to a file, and
   reused for every other split.
+- S2 nodata: a pixel is missing (NaN) only where **all 13** S2 bands are 0, decided before band
+  selection; missing inputs become 0 after normalisation (= train band mean).
+- Clipping: stats hold per-band `clip_min`/`clip_max` (`clip_min < clip_max`); each band is
+  clipped **before** normalising, and NaN stays NaN through clipping.
 
 ## Where code runs
 - Written and tested locally on CPU (Mac). Keep everything runnable on CPU for small inputs.
