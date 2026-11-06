@@ -46,6 +46,9 @@ S1 clip limits (1st / 99th percentile of valid train pixels, subsample of 15.1% 
 ## 5. Robustness evaluation
 - [ ] Synthetic cloud augmentation for S2
 - [ ] Modality dropout during training
+- [ ] TODO: Audit s2cloudless masks before using real-cloud bins: several Paraguay train chips are
+  marked 100% cloud but show clear ground or only haze (e.g. Paraguay_215904, Paraguay_36146).
+  Check probability maps, a stricter threshold, and spot-check chips per bin.
 - [ ] IoU vs cloud-cover curves for all models
 - [ ] Evaluation on held-out Bolivia split (evaluation only, never tuned on)
 
