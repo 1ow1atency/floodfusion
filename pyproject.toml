@@ -23,6 +23,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest"]
+# Cloud masks for evaluation (scripts/compute_cloud_cover.py). On macOS LightGBM also
+# needs the OpenMP runtime: `brew install libomp`. Not needed on Colab/Linux.
+clouds = ["s2cloudless>=1.7,<2"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

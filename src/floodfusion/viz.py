@@ -17,10 +17,11 @@ import matplotlib
 matplotlib.use("Agg")  # headless: works locally, on Colab and in tests
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
+from tqdm.auto import tqdm  # noqa: E402
 from matplotlib.colors import BoundaryNorm, ListedColormap  # noqa: E402
 from matplotlib.patches import Patch  # noqa: E402
 
-from .data import IGNORE_INDEX, S1_BANDS, S2_BANDS, load_label, load_raw  # noqa: E402
+from .chips import IGNORE_INDEX, S1_BANDS, S2_BANDS, load_label, load_raw  # noqa: E402
 
 TRUE_COLOUR: tuple[str, str, str] = ("B4", "B3", "B2")
 FALSE_COLOUR: tuple[str, str, str] = ("B11", "B8", "B4")  # SWIR1/NIR/red: water dark
@@ -104,16 +105,19 @@ def plot_chip(root: str | Path, chip_id: str, stats: dict, out_path: str | Path)
     return out_path
 
 
-def s1_class_histograms(root: str | Path, chip_ids: Iterable[str], edges: np.ndarray = HIST_EDGES) -> dict:
+def s1_class_histograms(root: str | Path, chip_ids: Iterable[str], edges: np.ndarray = HIST_EDGES,
+                        progress: bool = False) -> dict:
     """Streamed per-class S1 histograms over labelled pixels with valid S1.
 
-    Returns ``{band: {"water"|"land": {"counts", "below", "above", "total"}}}`` where
+    Counts are accumulated into the fixed bins ``edges`` one chip at a time, so memory
+    is constant in the number of chips (full train works on Colab). Returns
+    ``{band: {"water"|"land": {"counts", "below", "above", "total"}}}`` where
     below/above count values outside ``edges`` (nothing is silently dropped).
     """
     out = {b: {c: {"counts": np.zeros(len(edges) - 1, np.int64), "below": 0, "above": 0, "total": 0}
                for c in ("water", "land")} for b in S1_BANDS}
     n_chips = 0
-    for cid in chip_ids:
+    for cid in tqdm(chip_ids, desc="S1 histogram", disable=not progress):
         n_chips += 1
         s1 = load_raw(root, cid, "s1")
         y = load_label(root, cid)
@@ -164,5 +168,40 @@ def plot_s1_histograms(hist: dict, stats: dict, out_path: str | Path, title: str
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=110)
+    plt.close(fig)
+    return out_path
+
+
+def plot_cloud_examples(root: str | Path, examples: Sequence[tuple[dict, np.ndarray]],
+                        out_path: str | Path, title: str, ncols: int = 3) -> Path:
+    """Grid of S2 true colour chips with the cloud mask outlined in red.
+
+    ``examples`` is a sequence of (row, mask): row has chip_id, split, cloud_fraction,
+    valid_s2_fraction (as in floodfusion.clouds); mask is the boolean (H, W) cloud mask.
+    """
+    nrows = max(1, -(-len(examples) // ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5.2 * ncols, 5.4 * nrows), constrained_layout=True,
+                             squeeze=False)
+    for ax in axes.ravel():
+        ax.set_xticks([]); ax.set_yticks([])
+        ax.set_axis_off()
+    for ax, (row, mask) in zip(axes.ravel(), examples):
+        ax.set_axis_on()
+        s2 = load_raw(root, row["chip_id"], "s2")
+        ax.imshow(composite(s2, TRUE_COLOUR, TRUE_COLOUR_SCALE), interpolation="nearest")
+        if mask.any():  # faint tint shows which side of the outline is cloud
+            ax.imshow(np.ma.masked_where(~mask, mask), cmap=ListedColormap(["red"]), alpha=0.22,
+                      interpolation="nearest")
+        if mask.any() and not mask.all():
+            ax.contour(mask.astype(np.uint8), levels=[0.5], colors="red", linewidths=0.9)
+        elif mask.all():  # nothing to outline: frame the whole chip instead
+            for spine in ax.spines.values():
+                spine.set_color("red"); spine.set_linewidth(4)
+        ax.set_title(f"{row['chip_id']}\ncloud {row['cloud_fraction']:.1%} of valid S2, "
+                     f"valid {row['valid_s2_fraction']:.1%}", fontsize=10)
+    fig.suptitle(f"{title}  |  red outline + tint = s2cloudless cloud mask  |  magenta = missing S2", fontsize=12)
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=100)
     plt.close(fig)
     return out_path

@@ -107,3 +107,24 @@ def test_script_end_to_end(root: Path, tmp_path: Path):
     i = cmd.index("--index") + 1
     bad = subprocess.run(cmd[:i] + ["7"] + cmd[i + 1:], capture_output=True, text=True)
     assert bad.returncode != 0 and "--index must be in [0, 1]" in bad.stderr
+
+
+def test_script_histogram_only(root: Path, tmp_path: Path):
+    out = tmp_path / "hist_only"
+    base = [sys.executable, str(REPO / "scripts" / "visualize_sample.py"), "--root", str(root),
+            "--stats", str(root / "stats.json"), "--out", str(out), "--n", "0"]
+    subprocess.run(base, check=True, capture_output=True)
+    assert [p.name for p in out.iterdir()] == ["train_s1_hist.png"]
+    bad = subprocess.run(base + ["--no-hist"], capture_output=True, text=True)
+    assert bad.returncode != 0 and "--no-hist" in bad.stderr
+
+
+def test_cloud_examples_figure(root: Path, tmp_path: Path):
+    from floodfusion.viz import plot_cloud_examples
+
+    row = {"chip_id": "C0", "split": "train", "cloud_fraction": 0.25, "valid_s2_fraction": 0.9}
+    half = np.zeros((H, W), bool)
+    half[:8] = True
+    pairs = [(row, half), (row, np.ones((H, W), bool)), (row, np.zeros((H, W), bool))]
+    p = plot_cloud_examples(root, pairs, tmp_path / "c.png", title="t")
+    assert p.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"

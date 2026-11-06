@@ -23,8 +23,8 @@ import numpy as np
 import rasterio
 from tqdm.auto import tqdm
 
-from .data import (
-    IGNORE_INDEX, S1_BANDS, S2_BANDS, SPLITS, Sen1Floods11, chip_path, load_label, load_raw,
+from .chips import (
+    IGNORE_INDEX, S1_BANDS, S2_BANDS, SPLITS, chip_path, list_split_chips, load_label, load_raw,
 )
 
 STATS_SPLIT = "train"  # never anything else: stats from train only (CLAUDE.md)
@@ -57,7 +57,7 @@ def compute_band_stats(
     if not 0 <= lo_pct < hi_pct <= 100:
         raise ValueError(f"percentiles must satisfy 0 <= low < high <= 100, got {percentiles}")
 
-    ids = Sen1Floods11(root, STATS_SPLIT, allow_missing=allow_missing).ids
+    ids = list_split_chips(root, STATS_SPLIT, allow_missing)
     if not ids:
         raise ValueError(f"No usable chips in the {STATS_SPLIT} split under {root}")
 
@@ -151,7 +151,7 @@ def compute_label_stats(root: str | Path, *, allow_missing: bool = False) -> dic
     out: dict = {"meta": {"allow_missing": allow_missing,
                           "labelled": f"label != {IGNORE_INDEX}", "water": "label == 1"}}
     for split in SPLITS:
-        ids = Sen1Floods11(root, split, modalities=("s1",), allow_missing=allow_missing).ids
+        ids = list_split_chips(root, split, allow_missing)
         labelled = water = 0
         for cid in ids:
             y = load_label(root, cid)

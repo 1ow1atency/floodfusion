@@ -9,7 +9,7 @@ import argparse
 import json
 from pathlib import Path
 
-from floodfusion.data import SPLITS, Sen1Floods11
+from floodfusion.chips import SPLITS, list_split_chips
 from floodfusion.viz import plot_chip, plot_s1_histograms, s1_class_histograms
 
 
@@ -18,7 +18,7 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--root", required=True, help="Sen1Floods11 root")
     p.add_argument("--split", default="train", choices=SPLITS)
     p.add_argument("--index", type=int, default=0, help="first chip (position in the split CSV)")
-    p.add_argument("--n", type=int, default=1, help="number of chips to plot")
+    p.add_argument("--n", type=int, default=1, help="number of chips to plot (0 = histogram only)")
     p.add_argument("--stats", default="configs/band_stats.json", help="band stats JSON (for clip limits)")
     p.add_argument("--out", default="outputs/figures/", help="output folder")
     p.add_argument("--allow-missing", action="store_true",
@@ -27,9 +27,11 @@ def main(argv: list[str] | None = None) -> None:
     args = p.parse_args(argv)
 
     stats = json.loads(Path(args.stats).read_text())
-    ids = Sen1Floods11(args.root, args.split, allow_missing=args.allow_missing).ids
-    if not 0 <= args.index < len(ids) or args.n < 1:
-        raise SystemExit(f"--index must be in [0, {len(ids) - 1}] and --n >= 1 "
+    ids = list_split_chips(args.root, args.split, args.allow_missing)
+    if args.n < 0 or (args.n == 0 and args.no_hist):
+        raise SystemExit("--n must be >= 0, and --n 0 (histogram only) cannot be combined with --no-hist")
+    if args.n > 0 and not 0 <= args.index < len(ids):
+        raise SystemExit(f"--index must be in [0, {len(ids) - 1}] "
                          f"(split '{args.split}' has {len(ids)} usable chips)")
     chosen = ids[args.index : args.index + args.n]
     if len(chosen) < args.n:
@@ -41,7 +43,7 @@ def main(argv: list[str] | None = None) -> None:
         print(f"wrote {path}")
 
     if not args.no_hist:
-        hist = s1_class_histograms(args.root, ids)
+        hist = s1_class_histograms(args.root, ids, progress=True)
         path = plot_s1_histograms(hist, stats, out / f"{args.split}_s1_hist.png", title=f"split={args.split}")
         print(f"wrote {path}  ({hist['n_chips']} chips)")
 
