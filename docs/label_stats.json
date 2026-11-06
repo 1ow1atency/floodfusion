@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "allow_missing": false,
+    "labelled": "label != -1",
+    "water": "label == 1"
+  },
+  "train": {
+    "n_chips": 252,
+    "labelled_pixels": 57303407,
+    "water_pixels": 5447035,
+    "water_fraction": 0.095056040908702
+  },
+  "valid": {
+    "n_chips": 89,
+    "labelled_pixels": 20294725,
+    "water_pixels": 2237605,
+    "water_fraction": 0.1102554974260553
+  },
+  "test": {
+    "n_chips": 90,
+    "labelled_pixels": 20517367,
+    "water_pixels": 2566101,
+    "water_fraction": 0.1250697031446579
+  },
+  "bolivia": {
+    "n_chips": 15,
+    "labelled_pixels": 2867815,
+    "water_pixels": 454864,
+    "water_fraction": 0.1586099521761341
+  }
+}

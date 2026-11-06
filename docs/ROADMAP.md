@@ -14,6 +14,24 @@
 - [ ] Normalisation stats computed from train split only and saved
 - [ ] Synthetic GeoTIFF test fixtures + data tests
 
+### Dataset statistics
+From `docs/label_stats.json` (descriptive only) and `configs/band_stats.json` (train split,
+252 chips, `allow_missing=false`, seed 0). Water fraction = water / labelled pixels (label `-1` excluded).
+
+| Split   | Chips | Water fraction |
+|---------|------:|---------------:|
+| train   |   252 |          0.095 |
+| valid   |    89 |          0.110 |
+| test    |    90 |          0.125 |
+| bolivia |    15 |          0.159 |
+
+S1 clip limits (1st / 99th percentile of valid train pixels, subsample of 15.1% of pixels per chip):
+
+| Band | clip_min (dB) | clip_max (dB) |
+|------|--------------:|--------------:|
+| VV   |       −23.861 |        −2.414 |
+| VH   |       −34.152 |        −9.520 |
+
 ## 3. Baselines (U-Net)
 - [ ] Training / evaluation loop, water-class IoU metric, fixed seeds, W&B logging
 - [ ] SAR-only U-Net
