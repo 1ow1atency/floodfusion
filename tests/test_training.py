@@ -150,6 +150,42 @@ def test_resume_reproduces_an_uninterrupted_run(synth_cfg, tmp_path, every, epoc
     assert len(resume["epochs_retrained"]) <= every   # at most save_last_every epochs lost
 
 
+# The resume tests above all train on CPU, where map_location=device is a no-op, so the
+# Colab crash (RNG ByteTensors loaded onto the GPU) only shows up on a real accelerator.
+ACCEL = (torch.device("cuda") if torch.cuda.is_available()
+         else torch.device("mps") if torch.backends.mps.is_available() else None)
+needs_accel = pytest.mark.skipif(ACCEL is None, reason="needs a CUDA or MPS device")
+
+
+@needs_accel
+def test_rng_state_loaded_onto_accelerator_can_be_restored(tmp_path):
+    from floodfusion.training import _rng_state, _set_rng_state, save_atomic
+
+    gen = torch.Generator().manual_seed(1)
+    save_atomic({"rng": _rng_state(gen)}, tmp_path / "c.pt")
+    expected = (torch.rand(3), torch.rand(3, generator=gen))
+    state = load_checkpoint(tmp_path / "c.pt", map_location=ACCEL)["rng"]
+    assert state["torch"].device.type == ACCEL.type   # what the old resume code passed in
+    torch.manual_seed(123), gen.manual_seed(123)
+    _set_rng_state(state, gen)
+    got = (torch.rand(3), torch.rand(3, generator=gen))
+    assert all(torch.equal(a, b) for a, b in zip(expected, got))
+
+
+@needs_accel
+def test_resume_on_accelerator(synth_cfg, tmp_path):
+    cfg = _with(synth_cfg, tmp_path, save_last_every=1, epochs=2)
+    with pytest.raises(Disconnect):
+        run(cfg, device=ACCEL, log=_stop_after_epoch(1))
+    run_dir = run(cfg, resume=True, device=ACCEL, log=quiet)
+    assert [r["epoch"] for r in _rows(run_dir)] == ["1", "2"]
+    # Saved after the resumed epoch: optimizer state was on the training device, not left on CPU.
+    ckpt = torch.load(run_dir / "last.pt", map_location=None, weights_only=False)
+    assert ckpt["epoch"] == 2
+    moments = [v for s in ckpt["optimizer"]["state"].values() for k, v in s.items() if k != "step"]
+    assert moments and all(t.device.type == ACCEL.type for t in moments)
+
+
 def test_last_pt_schedule(synth_cfg, tmp_path, monkeypatch):
     import floodfusion.training as training
 

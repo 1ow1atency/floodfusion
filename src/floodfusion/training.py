@@ -267,12 +267,14 @@ def _rng_state(generator: torch.Generator) -> dict:
 
 
 def _set_rng_state(state: dict, generator: torch.Generator) -> None:
+    # torch/cuda/generator states must be CPU ByteTensors; .cpu() also accepts states that a
+    # non-CPU map_location moved to the GPU (no-op for CPU tensors).
     random.setstate(state["python"])
     np.random.set_state(state["numpy"])
-    torch.set_rng_state(state["torch"])
+    torch.set_rng_state(state["torch"].cpu())
     if state.get("cuda") is not None and torch.cuda.is_available():
-        torch.cuda.set_rng_state_all(state["cuda"])
-    generator.set_state(state["loader"])
+        torch.cuda.set_rng_state_all([s.cpu() for s in state["cuda"]])
+    generator.set_state(state["loader"].cpu())
 
 
 def save_atomic(obj: dict, path: Path) -> None:
@@ -362,7 +364,10 @@ def run(cfg: dict, *, resume: bool = False, smoke: bool = False, max_batches: in
     run_dir.mkdir(parents=True, exist_ok=True)
     info_path = run_dir / "run_info.json"
     if resume:
-        ckpt = load_checkpoint(last_path, map_location=device)
+        # Load on CPU: RNG states must stay CPU ByteTensors. model.load_state_dict copies into
+        # the parameters (already on `device`) and optimizer.load_state_dict moves its state to
+        # each parameter's device, so nothing else needs moving.
+        ckpt = load_checkpoint(last_path, map_location="cpu")
         if _fixed_part(ckpt["config"]) != _fixed_part(cfg):
             raise ValueError("--resume: data/model/train settings differ from the checkpoint's config; "
                              "start a new run instead of changing an existing one")
