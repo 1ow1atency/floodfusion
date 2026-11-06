@@ -26,6 +26,13 @@ def quiet(*_a, **_k):
     pass
 
 
+def fusion_cfg(cfg: dict, fusion: str = "cross_attention") -> dict:
+    """synth_cfg with FusionNet (resnet18 encoders, random init)."""
+    c = copy.deepcopy(cfg)
+    c["model"].update(arch="fusionnet", fusion=fusion, attention_heads=8)
+    return resolve_config(c)
+
+
 def _rows(run_dir: Path) -> list[dict]:
     with open(run_dir / "metrics.csv", newline="") as f:
         return list(csv.DictReader(f))
@@ -43,6 +50,19 @@ def test_repo_configs_load_and_differ_only_in_modalities(name):
     a, b = copy.deepcopy(cfg), copy.deepcopy(ref)
     for c in (a, b):
         c.pop("name"); c["data"].pop("modalities")
+    assert a == b
+
+
+def test_fusion_config_matches_early_fusion_training_settings():
+    """Fair comparison: fusion.yaml differs from early_fusion.yaml only in the model
+    (and save_last_every, which does not affect training)."""
+    fus = resolve_config(load_config(REPO / "configs" / "fusion.yaml"))
+    ref = resolve_config(load_config(REPO / "configs" / "early_fusion.yaml"))
+    assert fus["model"] == {"arch": "fusionnet", "encoder": "resnet34", "encoder_weights": "imagenet",
+                            "fusion": "cross_attention", "attention_heads": 8}
+    assert fus["seed"] == ref["seed"] and fus["data"] == ref["data"] and fus["wandb"] == ref["wandb"]
+    a, b = dict(fus["train"]), dict(ref["train"])
+    a.pop("save_last_every"), b.pop("save_last_every")
     assert a == b
 
 
@@ -124,17 +144,21 @@ def _with(cfg, out, **train):
     return c
 
 
-@pytest.mark.parametrize("every, epochs, stop_after, ckpt_epoch", [
-    (1, 2, 1, 1),   # last.pt every epoch: nothing is lost
-    (2, 4, 3, 2),   # last.pt at 2 and 4: disconnect after 3 loses epoch 3, which is trained again
+@pytest.mark.parametrize("every, epochs, stop_after, ckpt_epoch, arch", [
+    (1, 2, 1, 1, "unet"),        # last.pt every epoch: nothing is lost
+    (2, 4, 3, 2, "unet"),        # last.pt at 2 and 4: disconnect after 3 loses epoch 3, which is trained again
+    (2, 3, 2, 2, "fusionnet"),   # FusionNet (cross-attention): same guarantee
 ])
-def test_resume_reproduces_an_uninterrupted_run(synth_cfg, tmp_path, every, epochs, stop_after, ckpt_epoch):
+def test_resume_reproduces_an_uninterrupted_run(synth_cfg, tmp_path, every, epochs, stop_after, ckpt_epoch, arch):
+    if arch == "fusionnet":
+        synth_cfg = fusion_cfg(synth_cfg)
     a = run(_with(synth_cfg, tmp_path / "straight", save_last_every=every, epochs=epochs), device=CPU, log=quiet)
 
     interrupted = _with(synth_cfg, tmp_path / "interrupted", save_last_every=every, epochs=epochs)
     with pytest.raises(Disconnect):
         run(interrupted, device=CPU, log=_stop_after_epoch(stop_after))
     b_dir = Path(interrupted["output_dir"]) / "tiny_seed0"
+    assert json.loads((b_dir / "run_info.json").read_text())["arch"] == arch
     assert load_checkpoint(b_dir / "last.pt")["epoch"] == ckpt_epoch
     assert len(_rows(b_dir)) == stop_after          # metrics.csv was ahead of last.pt
     b = run(interrupted, resume=True, device=CPU, log=quiet)
@@ -237,6 +261,25 @@ def test_save_last_every_validation_and_change_on_resume(synth_cfg, tmp_path):
     run(resolve_config(cfg, save_last_every=1), resume=True, device=CPU, log=quiet)  # allowed: not training-relevant
 
 
+def test_checkpoints_from_before_fusionnet_still_resume_and_evaluate(synth_cfg, tmp_path):
+    """Baseline checkpoints written before model.arch existed (no arch key in their config)."""
+    cfg = _with(synth_cfg, tmp_path, save_last_every=1, epochs=2)
+    with pytest.raises(Disconnect):
+        run(cfg, device=CPU, log=_stop_after_epoch(1))
+    run_dir = Path(cfg["output_dir"]) / "tiny_seed0"
+    for name in ("last.pt", "best.pt"):
+        ck = load_checkpoint(run_dir / name)
+        del ck["config"]["model"]["arch"]
+        torch.save(ck, run_dir / name)
+    old = copy.deepcopy(cfg)
+    del old["model"]["arch"]
+    run(resolve_config(old), resume=True, device=CPU, log=quiet)
+    res = evaluate(run_dir / "best.pt", "valid", out_dir=tmp_path / "ev", device=CPU, log=quiet)
+    assert res["n_chips"] == 2
+    with pytest.raises(ValueError, match="differ"):  # switching to fusionnet on resume is refused
+        run(fusion_cfg(cfg), resume=True, device=CPU, log=quiet)
+
+
 def test_resume_errors(synth_cfg):
     with pytest.raises(FileNotFoundError, match="no checkpoint"):
         run(synth_cfg, resume=True, device=CPU, log=quiet)
@@ -277,6 +320,16 @@ def test_evaluate_writes_json_and_per_chip_csv(synth_cfg, tmp_path):
         assert sum(int(r[k]) for r in rows) == data["metrics"][k]   # per-chip counts add up
     with pytest.raises(ValueError, match="split must be"):
         evaluate(run_dir / "best.pt", "train", device=CPU, log=quiet)
+
+
+@pytest.mark.parametrize("fusion", ["cross_attention", "concat"])
+def test_fusionnet_trains_and_evaluates(synth_cfg, tmp_path, fusion):
+    run_dir = run(fusion_cfg(synth_cfg, fusion), device=CPU, log=quiet)
+    info = json.loads((run_dir / "run_info.json").read_text())
+    assert info["arch"] == "fusionnet" and info["fusion"] == fusion and info["n_params"] > 0
+    best = load_checkpoint(run_dir / "best.pt")
+    res = evaluate(run_dir / "best.pt", "valid", out_dir=tmp_path / "ev", device=CPU, log=quiet)
+    assert res["metrics"]["iou"] == pytest.approx(best["val_iou"])  # same inputs as in validation
 
 
 def test_evaluate_matches_validation_metrics(synth_cfg):

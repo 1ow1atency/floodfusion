@@ -17,8 +17,8 @@ from torch.utils.data import DataLoader
 
 from .data import Sen1Floods11
 from .metrics import WaterConfusion
-from .models import build_unet
-from .training import _autocast, check_modalities, git_info, in_channels, load_checkpoint, stack_inputs
+from .models import build_model
+from .training import _autocast, check_modalities, forward_model, git_info, load_checkpoint
 
 EVAL_SPLITS = ("valid", "test", "bolivia")
 PER_CHIP_COLUMNS = ("chip_id", "tp", "fp", "fn", "tn", "n_valid", "iou")
@@ -40,7 +40,7 @@ def evaluate(checkpoint: str | Path, split: str, *, root: str | None = None, out
         log("WARNING: this is a SMOKE-TEST checkpoint; its metrics are not a result.")
 
     # Pretrained weights are not needed: all weights come from the checkpoint.
-    model = build_unet(in_channels(cfg), cfg["model"]["encoder"], encoder_weights=None)
+    model = build_model(cfg, encoder_weights=None)
     model.load_state_dict(ckpt["model"])
     model.to(device).eval()
 
@@ -52,7 +52,7 @@ def evaluate(checkpoint: str | Path, split: str, *, root: str | None = None, out
     with torch.no_grad():
         for batch in loader:
             with _autocast(device, amp):
-                logits = model(stack_inputs(batch, mods).to(device))
+                logits = forward_model(model, batch, cfg, device)
             conf.update(logits.float(), batch["label"].to(device), list(batch["id"]))
 
     out_dir = Path(out_dir) if out_dir else checkpoint.parent / f"eval_{split}"

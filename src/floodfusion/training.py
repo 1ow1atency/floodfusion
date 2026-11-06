@@ -1,4 +1,4 @@
-"""Training loop for the U-Net baselines (SAR-only, optical-only, early fusion).
+"""Training loop for the U-Net baselines (SAR-only, optical-only, early fusion) and FusionNet.
 
 Rules enforced here (CLAUDE.md):
   * Training uses the train split, validation/model selection the valid split only.
@@ -16,6 +16,11 @@ improves; model weights, config and stats only).
 save_last_every (default 5): last.pt is ~294 MB for ResNet34 + AdamW, and on a
 Colab-mounted Drive every replaced version can go to Drive's Bin and count against the
 quota, so it is not rewritten every epoch.
+
+Models: ``model.arch`` "unet" (default; one input tensor, modalities stacked on the channel
+axis) or "fusionnet" (separate s1 / s2 inputs plus an (N, 2) modality mask; see
+floodfusion.models). ``forward_model`` is the only place that knows the difference. The
+mask is ``batch["modality_mask"]`` if the batch has one, else all modalities present.
 
 Resume: last.pt holds model, optimizer, scheduler, AMP scaler, completed epoch, best
 score and RNG states (Python, NumPy, torch, CUDA, DataLoader generator). It is written
@@ -52,7 +57,7 @@ from .chips import S2_BANDS
 from .data import Sen1Floods11
 from .losses import CEDiceLoss
 from .metrics import WaterConfusion
-from .models import build_unet
+from .models import ARCHS, FUSIONS, build_model, count_parameters
 from .transforms import TrainTransform
 from .utils import seed_everything
 
@@ -65,7 +70,7 @@ METRIC_COLUMNS = ("epoch", "lr", "train_loss", "val_loss", "val_iou", "val_f1", 
                   "best_val_iou", "epoch_time_s")
 # Config keys that must not change when resuming (paths, workers and W&B may).
 _RESUME_FIXED = {"data": ("stats", "modalities", "s2_bands", "train_split", "val_split", "crop_size"),
-                 "model": ("encoder", "encoder_weights"),
+                 "model": ("arch", "encoder", "encoder_weights", "fusion", "attention_heads"),
                  "train": None}  # None = whole section
 # ...except these, which do not affect training and may change on resume.
 _RESUME_FREE = {"train": ("save_last_every",)}
@@ -116,6 +121,7 @@ def resolve_config(cfg: dict, root: str | None = None, out: str | None = None,
     k = cfg["train"]["save_last_every"]
     if isinstance(k, bool) or not isinstance(k, int) or k < 1:
         raise ValueError(f"train.save_last_every must be an integer >= 1, got {k!r}")
+    _apply_model_defaults(cfg)
     cfg["train"].setdefault("amp", True)
     cfg["train"].setdefault("ce_weight", 1.0)
     cfg["train"].setdefault("dice_weight", 1.0)
@@ -123,6 +129,32 @@ def resolve_config(cfg: dict, root: str | None = None, out: str | None = None,
     if no_wandb:
         cfg["wandb"]["enabled"] = False
     return cfg
+
+
+def _apply_model_defaults(cfg: dict) -> None:
+    """model.arch defaults to "unet" (configs and checkpoints from before FusionNet have no
+    arch); fusionnet gets fusion / attention_heads defaults. Validates the values."""
+    m = cfg["model"]
+    m.setdefault("arch", "unet")
+    if m["arch"] not in ARCHS:
+        raise ValueError(f"model.arch must be one of {ARCHS}, got {m['arch']!r}")
+    if m["arch"] == "fusionnet":
+        m.setdefault("fusion", "cross_attention")
+        m.setdefault("attention_heads", 8)
+        if m["fusion"] not in FUSIONS:
+            raise ValueError(f"model.fusion must be one of {FUSIONS}, got {m['fusion']!r}")
+        h = m["attention_heads"]
+        if isinstance(h, bool) or not isinstance(h, int) or h < 1:
+            raise ValueError(f"model.attention_heads must be an integer >= 1, got {h!r}")
+        if tuple(cfg["data"]["modalities"]) != ("s1", "s2"):
+            raise ValueError(f"fusionnet needs data.modalities [s1, s2], got {list(cfg['data']['modalities'])}")
+
+
+def model_description(cfg: dict) -> str:
+    m = cfg["model"]
+    if m.get("arch", "unet") == "fusionnet":
+        return f"fusionnet ({m['fusion']}, {m['encoder']} x2)"
+    return f"unet ({m['encoder']}, in_channels {in_channels(cfg)})"
 
 
 def check_splits(cfg: dict) -> None:
@@ -152,6 +184,18 @@ def in_channels(cfg: dict) -> int:
 def stack_inputs(batch: dict, modalities: tuple[str, ...]) -> torch.Tensor:
     """Model input: modalities concatenated on the channel axis in config order (S1 first)."""
     return torch.cat([batch[m] for m in modalities], dim=1)
+
+
+def forward_model(model, batch: dict, cfg: dict, device: torch.device, non_blocking: bool = False) -> torch.Tensor:
+    """Logits (N, 2, H, W) for a batch. U-Net: one stacked tensor (exactly as for the
+    baselines). FusionNet: s1, s2 and the modality mask as separate inputs."""
+    if cfg["model"].get("arch", "unet") == "unet":
+        return model(stack_inputs(batch, check_modalities(cfg)).to(device, non_blocking=non_blocking))
+    s1 = batch["s1"].to(device, non_blocking=non_blocking)
+    s2 = batch["s2"].to(device, non_blocking=non_blocking)
+    mask = batch.get("modality_mask")
+    mask = torch.ones(s1.shape[0], 2, dtype=torch.bool) if mask is None else mask
+    return model(s1, s2, mask.to(device))
 
 
 def run_dir_for(cfg: dict, smoke: bool) -> Path:
@@ -216,18 +260,17 @@ def _autocast(device: torch.device, amp: bool):
     return contextlib.nullcontext()
 
 
-def train_one_epoch(model, loader, loss_fn, optimizer, scheduler, scaler, device, amp, mods,
+def train_one_epoch(model, loader, loss_fn, optimizer, scheduler, scaler, device, amp, cfg,
                     max_batches: int | None = None) -> float:
     model.train()
     total, n = 0.0, 0
     for i, batch in enumerate(loader):
         if max_batches is not None and i >= max_batches:
             break
-        x = stack_inputs(batch, mods).to(device, non_blocking=True)
         y = batch["label"].to(device, non_blocking=True)
         optimizer.zero_grad(set_to_none=True)
         with _autocast(device, amp):
-            logits = model(x)
+            logits = forward_model(model, batch, cfg, device, non_blocking=True)
         loss = loss_fn(logits, y)  # computed in float32
         if not torch.isfinite(loss):
             raise FloatingPointError(f"non-finite training loss {loss.item()} at batch {i}")
@@ -241,17 +284,16 @@ def train_one_epoch(model, loader, loss_fn, optimizer, scheduler, scaler, device
 
 
 @torch.no_grad()
-def validate(model, loader, loss_fn, device, amp, mods, max_batches: int | None = None):
+def validate(model, loader, loss_fn, device, amp, cfg, max_batches: int | None = None):
     model.eval()
     conf = WaterConfusion()
     total, n = 0.0, 0
     for i, batch in enumerate(loader):
         if max_batches is not None and i >= max_batches:
             break
-        x = stack_inputs(batch, mods).to(device)
         y = batch["label"].to(device)
         with _autocast(device, amp):
-            logits = model(x)
+            logits = forward_model(model, batch, cfg, device)
         total += loss_fn(logits, y).item()
         n += 1
         conf.update(logits.float(), y, list(batch["id"]))
@@ -289,6 +331,8 @@ def load_checkpoint(path: str | Path, map_location="cpu") -> dict:
 
 
 def _fixed_part(cfg: dict) -> dict:
+    cfg = copy.deepcopy(cfg)
+    _apply_model_defaults(cfg)  # checkpoints from before FusionNet have no model.arch
     out = {s: (dict(cfg[s]) if keys is None else {k: cfg[s].get(k) for k in keys}) for s, keys in _RESUME_FIXED.items()}
     for s, keys in _RESUME_FREE.items():
         for k in keys:
@@ -352,7 +396,7 @@ def run(cfg: dict, *, resume: bool = False, smoke: bool = False, max_batches: in
     steps_per_epoch = min(len(train_loader), max_batches or len(train_loader))
     epochs = int(cfg["train"]["epochs"])
 
-    model = build_unet(in_channels(cfg), cfg["model"]["encoder"], cfg["model"]["encoder_weights"]).to(device)
+    model = build_model(cfg).to(device)
     lr = float(cfg["train"]["lr"])
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=float(cfg["train"]["weight_decay"]))
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -398,14 +442,16 @@ def run(cfg: dict, *, resume: bool = False, smoke: bool = False, max_batches: in
         _write_metrics(metrics_path, rows)
         info = {"name": cfg["name"], "seed": seed, "smoke": smoke, "started": _now(), **git_info(),
                 "device": str(device), "amp": amp, "torch": torch.__version__,
-                "command": " ".join(sys.argv), "in_channels": in_channels(cfg), "modalities": list(mods),
+                "command": " ".join(sys.argv), "model": model_description(cfg), "arch": cfg["model"]["arch"],
+                "fusion": cfg["model"].get("fusion"), "n_params": count_parameters(model),
+                "in_channels": in_channels(cfg), "modalities": list(mods),
                 "n_train_chips": len(train_loader.dataset), "n_val_chips": len(val_loader.dataset),
                 "steps_per_epoch": steps_per_epoch}
         (run_dir / "config.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False))
     info_path.write_text(json.dumps(info, indent=2) + "\n")
 
     wandb_run = _init_wandb(cfg, run_dir, wandb_id) if cfg["wandb"]["enabled"] else None
-    log(f"run {run_dir} | device {device} | amp {amp} | in_channels {in_channels(cfg)} | "
+    log(f"run {run_dir} | device {device} | amp {amp} | {model_description(cfg)} | "
         f"{len(train_loader.dataset)} train chips, {len(val_loader.dataset)} val chips | "
         f"{steps_per_epoch} steps/epoch | epochs {start_epoch}..{epochs}")
 
@@ -413,8 +459,8 @@ def run(cfg: dict, *, resume: bool = False, smoke: bool = False, max_batches: in
         t0 = time.time()
         lr_now = optimizer.param_groups[0]["lr"]
         train_loss = train_one_epoch(model, train_loader, loss_fn, optimizer, scheduler, scaler, device, amp,
-                                     mods, max_batches)
-        conf, val_loss = validate(model, val_loader, loss_fn, device, amp, mods, max_batches)
+                                     cfg, max_batches)
+        conf, val_loss = validate(model, val_loader, loss_fn, device, amp, cfg, max_batches)
         m = conf.compute()
         improved = not math.isnan(m["iou"]) and m["iou"] > best_iou
         if improved:
