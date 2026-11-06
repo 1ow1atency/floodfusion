@@ -161,3 +161,36 @@ def test_failed_clone_without_token_hints_at_secret(tmp_path, colab, capsys):
     colab["get"] = colab["missing"]
     with pytest.raises(RuntimeError, match="add the GITHUB_TOKEN secret"):
         run_cell(tmp_path / "does-not-exist", tmp_path / "clone")
+
+
+# --- notebook 03 (training) and general notebook hygiene ------------------------------
+
+def _code_cells(nb_name: str) -> list[str]:
+    nb = json.loads((REPO / "notebooks" / nb_name).read_text())
+    return ["".join(c["source"]) for c in nb["cells"] if c["cell_type"] == "code"]
+
+
+def test_all_notebook_code_cells_compile():
+    import re
+
+    for nb_path in sorted((REPO / "notebooks").glob("*.ipynb")):
+        for i, src in enumerate(_code_cells(nb_path.name)):
+            compile(re.sub(r"^(\s*)!.*$", r"\1pass", src, flags=re.M), f"{nb_path.name}[{i}]", "exec")
+
+
+def test_train_notebook_contract():
+    nb = json.loads((REPO / "notebooks" / "03_train.ipynb").read_text())
+    top = "".join(nb["cells"][0]["source"])
+    assert ("Only change the settings cell. Re-running after a disconnect resumes automatically. "
+            "Never change hyperparameters based on test or bolivia results.") in top
+    code = _code_cells("03_train.ipynb")
+    settings = code[0]
+    ns: dict = {}
+    exec(settings, ns)
+    assert set(k for k in ns if not k.startswith("__")) == {"CONFIG", "SEED", "USE_WANDB"}
+    assert (REPO / ns["CONFIG"]).is_file()
+    joined = "\n".join(code)
+    # torch and s2cloudless must never meet: nothing from the clouds extra.
+    assert "clouds" not in joined and "s2cloudless" not in joined
+    assert '--resume' in joined and '--no-wandb' in joined and "/content/data/sen1floods11" in joined
+    assert all(s in joined for s in ("'valid'", "'test'", "'bolivia'"))

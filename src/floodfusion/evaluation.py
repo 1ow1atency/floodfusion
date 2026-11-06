@@ -82,3 +82,25 @@ def evaluate(checkpoint: str | Path, split: str, *, root: str | None = None, out
 
 def _none_if_nan(v: float):
     return None if math.isnan(v) else v
+
+
+def format_eval_table(run_dir: str | Path, splits=EVAL_SPLITS) -> str:
+    """Table of water IoU, F1, precision, recall from <run_dir>/eval_<split>/metrics.json."""
+    def f(v):
+        return "   n/a" if v is None else f"{v:6.4f}"
+
+    lines, meta = [], None
+    head = f"{'split':<9}{'chips':>6}{'IoU':>9}{'F1':>9}{'prec':>9}{'recall':>9}"
+    for split in splits:
+        path = Path(run_dir) / f"eval_{split}" / "metrics.json"
+        if not path.is_file():
+            lines.append(f"{split:<9}{'(not evaluated)':>24}")
+            continue
+        d = json.loads(path.read_text())
+        meta = meta or d
+        m = d["metrics"]
+        lines.append(f"{split:<9}{d['n_chips']:>6}   {f(m['iou'])}   {f(m['f1'])}   "
+                     f"{f(m['precision'])}   {f(m['recall'])}")
+    title = (f"{meta['run']} | seed {meta['seed']} | best.pt from epoch {meta['checkpoint_epoch']} | "
+             f"cloud setting: real (no synthetic clouds)" if meta else str(run_dir))
+    return "\n".join([title, head, "-" * len(head), *lines])

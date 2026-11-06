@@ -205,3 +205,34 @@ def plot_cloud_examples(root: str | Path, examples: Sequence[tuple[dict, np.ndar
     fig.savefig(out_path, dpi=100)
     plt.close(fig)
     return out_path
+
+
+def plot_training_curves(metrics_csv: str | Path, out_path: str | Path, title: str = "") -> Path:
+    """Train loss and valid water IoU per epoch from a run's metrics.csv; best epoch marked."""
+    import csv
+
+    with open(metrics_csv, newline="") as f:
+        rows = list(csv.DictReader(f))
+    if not rows:
+        raise ValueError(f"{metrics_csv} has no epochs yet")
+
+    def col(k):
+        return np.array([float(r[k]) if r[k] != "" else np.nan for r in rows])
+
+    ep, iou = col("epoch"), col("val_iou")
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(13, 4.2), constrained_layout=True)
+    a1.plot(ep, col("train_loss"), label="train loss", color="#c0612b")
+    a1.plot(ep, col("val_loss"), label="valid loss", color="#555555", alpha=0.7)
+    a1.set_xlabel("epoch"); a1.set_ylabel("CE + Dice"); a1.legend(); a1.set_title("Loss")
+    a2.plot(ep, iou, color=LABEL_COLOURS[1], label="valid water IoU")
+    if np.isfinite(iou).any():
+        b = int(np.nanargmax(iou))
+        a2.scatter([ep[b]], [iou[b]], color="k", zorder=3, label=f"best {iou[b]:.4f} (epoch {int(ep[b])})")
+    a2.set_xlabel("epoch"); a2.set_ylabel("water IoU (valid, pooled)"); a2.set_ylim(0, 1)
+    a2.legend(loc="lower right"); a2.set_title("Validation")
+    fig.suptitle(title or str(Path(metrics_csv).parent.name))
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=110)
+    plt.close(fig)
+    return out_path

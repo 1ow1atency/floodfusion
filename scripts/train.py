@@ -18,13 +18,15 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--config", required=True, help="YAML config in configs/")
     p.add_argument("--root", help="override data.root")
     p.add_argument("--out", help="override output_dir")
+    p.add_argument("--seed", type=int, help="override the config seed (saved in the run's config.yaml)")
     p.add_argument("--no-wandb", action="store_true", help="disable Weights & Biases logging")
     p.add_argument("--resume", action="store_true", help="continue the run from its last.pt")
     p.add_argument("--smoke", action="store_true",
                    help="2 train + 2 val batches on CPU/MPS with the local sample (allow_missing); NOT a result")
     args = p.parse_args(argv)
 
-    cfg = resolve_config(load_config(args.config), root=args.root, out=args.out, no_wandb=args.no_wandb)
+    cfg = resolve_config(load_config(args.config), root=args.root, out=args.out, no_wandb=args.no_wandb,
+                         seed=args.seed)
     run(cfg, resume=args.resume, smoke=args.smoke)
 
 

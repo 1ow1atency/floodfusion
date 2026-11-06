@@ -9,7 +9,8 @@ Rules enforced here (CLAUDE.md):
 
 Run folder: ``<output_dir>/<name>_seed<seed>`` (``..._smoke`` in smoke mode) with
 config.yaml (resolved), run_info.json (git commit, seed, device, resumes), metrics.csv
-(one row per epoch), last.pt (every epoch) and best.pt (best valid water IoU).
+(one row per epoch), last.pt (every epoch, full training state) and best.pt (best valid
+water IoU; model weights, config and stats only).
 
 Resume: last.pt holds model, optimizer, scheduler, AMP scaler, completed epoch, best
 score and RNG states (Python, NumPy, torch, CUDA, DataLoader generator). It is written
@@ -58,6 +59,7 @@ _RESUME_FIXED = {"data": ("stats", "modalities", "s2_bands", "train_split", "val
                  "model": ("encoder", "encoder_weights"),
                  "train": None}  # None = whole section
 REPO_ROOT = Path(__file__).resolve().parents[2]
+_TRAIN_STATE_KEYS = ("optimizer", "scheduler", "scaler", "rng")
 
 SMOKE_BANNER = ("\n" + "!" * 78 + "\n!!  SMOKE TEST: 2 train batches, 'validation' on 2 TRAIN chips of the local sample."
                 "\n!!  These numbers are NOT a result. Never report or compare them.\n" + "!" * 78 + "\n")
@@ -81,8 +83,12 @@ def load_config(path: str | Path) -> dict:
 
 
 def resolve_config(cfg: dict, root: str | None = None, out: str | None = None,
-                   no_wandb: bool = False) -> dict:
+                   no_wandb: bool = False, seed: int | None = None) -> dict:
+    """Apply CLI overrides and defaults. The resolved config is saved in the run folder,
+    so a run stays reproducible from its own files."""
     cfg = copy.deepcopy(cfg)
+    if seed is not None:
+        cfg["seed"] = int(seed)
     if root is not None:
         cfg["data"]["root"] = root
     if out is not None:
@@ -388,8 +394,8 @@ def run(cfg: dict, *, resume: bool = False, smoke: bool = False, max_batches: in
                 "best_val_iou": best_iou, "best_epoch": best_epoch, "val_iou": m["iou"], "config": cfg,
                 "stats": stats, "smoke": smoke, "rng": _rng_state(generator),
                 "wandb_id": wandb_run.id if wandb_run else wandb_id, **git_info()}
-        if improved:
-            save_atomic(ckpt, best_path)
+        if improved:  # best.pt is for evaluation only: no optimizer/scheduler/scaler/RNG (~1/3 the size)
+            save_atomic({k: v for k, v in ckpt.items() if k not in _TRAIN_STATE_KEYS}, best_path)
         save_atomic(ckpt, last_path)
         if wandb_run:
             wandb_run.log({k: v for k, v in row.items() if k != "epoch"}, step=epoch)

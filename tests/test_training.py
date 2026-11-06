@@ -101,6 +101,7 @@ def test_run_writes_folder_contents(synth_cfg):
     assert set(ckpt) >= {"model", "optimizer", "scheduler", "scaler", "best_val_iou", "rng", "config"}
     best = load_checkpoint(run_dir / "best.pt")
     assert best["val_iou"] == pytest.approx(max(float(r["val_iou"]) for r in rows))
+    assert not set(best) & {"optimizer", "scheduler", "scaler", "rng"} and "model" in best
     with pytest.raises(FileExistsError, match="--resume"):
         run(synth_cfg, device=CPU, log=quiet)
 
@@ -193,8 +194,25 @@ def test_scripts_run_end_to_end(synth_cfg, tmp_path):
     cfg_path = tmp_path / "cfg.yaml"
     cfg_path.write_text(yaml.safe_dump(synth_cfg))
     subprocess.run([sys.executable, str(REPO / "scripts" / "train.py"), "--config", str(cfg_path),
-                    "--out", str(tmp_path / "cli"), "--no-wandb"], check=True, capture_output=True)
-    ckpt = tmp_path / "cli" / "tiny_seed0" / "best.pt"
+                    "--out", str(tmp_path / "cli"), "--no-wandb", "--seed", "3"], check=True, capture_output=True)
+    ckpt = tmp_path / "cli" / "tiny_seed3" / "best.pt"
+    assert yaml.safe_load((ckpt.parent / "config.yaml").read_text())["seed"] == 3
     r = subprocess.run([sys.executable, str(REPO / "scripts" / "evaluate.py"), "--checkpoint", str(ckpt),
                         "--split", "bolivia"], check=True, capture_output=True, text=True)
     assert "split=bolivia" in r.stdout and (ckpt.parent / "eval_bolivia" / "metrics.json").is_file()
+
+
+def test_eval_table_and_training_curves(synth_cfg):
+    from floodfusion.evaluation import format_eval_table
+    from floodfusion.viz import plot_training_curves
+
+    run_dir = run(synth_cfg, device=CPU, log=quiet)
+    assert "(not evaluated)" in format_eval_table(run_dir)
+    results = {s: evaluate(run_dir / "best.pt", s, device=CPU, log=quiet) for s in ("valid", "test", "bolivia")}
+    table = format_eval_table(run_dir)
+    assert "seed 0" in table and "cloud setting: real" in table and "(not evaluated)" not in table
+    for s, r in results.items():
+        line = next(l for l in table.splitlines() if l.startswith(s))
+        assert f"{r['metrics']['iou']:6.4f}" in line
+    png = plot_training_curves(run_dir / "metrics.csv", run_dir / "training_curves.png")
+    assert png.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
