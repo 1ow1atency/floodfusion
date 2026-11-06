@@ -84,6 +84,36 @@ def _read_float32(path: Path, indexes: Sequence[int] | None = None) -> np.ndarra
         return src.read(indexes=idx, out_dtype="float32")
 
 
+def mark_missing(x: np.ndarray, modality: str) -> np.ndarray:
+    """Set missing values to NaN in place and return ``x`` (all bands, shape (C, H, W)).
+
+    Missing = any non-finite value; for S2 also every pixel where ALL bands are 0
+    (the S2 nodata value). ±inf counts as missing so it is never clipped to a limit.
+    Must be applied to the full band stack, before band selection.
+    """
+    if modality == "s2":
+        if x.shape[0] != len(S2_BANDS):
+            raise ValueError(f"S2 nodata rule needs all {len(S2_BANDS)} bands, got {x.shape[0]}")
+        x[:, (x == 0).all(axis=0)] = np.nan
+    elif modality != "s1":
+        raise ValueError(f"modality must be 's1' or 's2', got {modality!r}")
+    x[~np.isfinite(x)] = np.nan
+    return x
+
+
+def load_raw(root: str | Path, chip_id: str, modality: str) -> np.ndarray:
+    """All bands of one chip's S1 or S2 as float32 (C, H, W), missing values as NaN,
+    not clipped or normalised. Shared by the Dataset and the stats computation."""
+    return mark_missing(_read_float32(chip_path(root, chip_id, modality)), modality)
+
+
+def load_label(root: str | Path, chip_id: str) -> np.ndarray:
+    """Label of one chip as int64 (H, W); NaN -> IGNORE_INDEX."""
+    y = _read_float32(chip_path(root, chip_id, "label"))[0]
+    y[np.isnan(y)] = IGNORE_INDEX
+    return y.astype(np.int64)
+
+
 class Sen1Floods11(Dataset):
     """Sen1Floods11 hand-labeled chips.
 
@@ -201,15 +231,8 @@ class Sen1Floods11(Dataset):
         return len(self.ids)
 
     def _load_input(self, cid: str, mod: str) -> np.ndarray:
-        path = chip_path(self.root, cid, mod)
-        if mod == "s2":
-            # Nodata is decided on all 13 bands, so read them all, then select.
-            x = _read_float32(path)
-            x[:, (x == 0).all(axis=0)] = np.nan
-            x = x[self._s2_idx]
-        else:
-            x = _read_float32(path, self._s1_idx)
-        x[~np.isfinite(x)] = np.nan  # ±inf counts as missing too (not clipped to a limit)
+        x = load_raw(self.root, cid, mod)
+        x = x[self._s2_idx] if mod == "s2" else x[self._s1_idx]
 
         if self._norm is not None:
             s = self._norm[mod]
@@ -219,17 +242,12 @@ class Sen1Floods11(Dataset):
         x[np.isnan(x)] = 0.0
         return x
 
-    def _load_label(self, cid: str) -> np.ndarray:
-        y = _read_float32(chip_path(self.root, cid, "label"))[0]
-        y[np.isnan(y)] = IGNORE_INDEX
-        return y.astype(np.int64)
-
     def __getitem__(self, i: int) -> dict:
         cid = self.ids[i]
         sample: dict = {"id": cid}
         for mod in self.modalities:
             sample[mod] = torch.from_numpy(self._load_input(cid, mod))
-        sample["label"] = torch.from_numpy(self._load_label(cid))
+        sample["label"] = torch.from_numpy(load_label(self.root, cid))
 
         h, w = sample["label"].shape
         for mod in self.modalities:
