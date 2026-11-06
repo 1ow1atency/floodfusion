@@ -38,6 +38,19 @@ S1 clip limits (1st / 99th percentile of valid train pixels, subsample of 15.1% 
 - [ ] Optical-only U-Net
 - [ ] Early-fusion U-Net (S1 + S2 channels concatenated)
 
+### Baseline results
+Seed 0, `best.pt` selected on valid, evaluated on full 512×512 chips. Cloud setting: real S2 as
+acquired (no synthetic clouds). Metric: water-class IoU (label `-1` ignored).
+
+| model        | valid IoU | test IoU | bolivia IoU | test precision | test recall |
+|--------------|----------:|---------:|------------:|---------------:|------------:|
+| s1_only      |    0.6612 |   0.6567 |      0.6253 |         0.8168 |      0.7702 |
+| s2_only      |    0.8297 |   0.8276 |      0.7908 |         0.9269 |      0.8854 |
+| early_fusion |    0.8379 |   0.8202 |      0.7922 |         0.9339 |      0.8707 |
+
+Early fusion does not beat optical-only on real (mostly clear) data. Hypothesis to test in
+Stage 5: it relies on S2 and ignores S1, so it should collapse under clouds.
+
 ## 4. Fusion model
 - [ ] Two-branch encoder (SAR branch, optical branch)
 - [ ] Cross-attention fusion
