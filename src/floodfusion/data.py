@@ -13,6 +13,9 @@ Missing-value policy (inputs never reach the model with NaN):
       1. Mark missing as NaN: any non-finite S1/S2 value, and every S2 pixel where
          ALL 13 bands are 0 (the S2 nodata value). A 0 in only some bands is kept.
          This is decided on all 13 bands, before band selection.
+      1b. Optional ``s2_augment`` (training only, e.g. synthetic clouds) on the raw
+         13-band S2 in DN, after step 1 and before band selection, clipping and
+         normalisation. NaN must stay NaN. Without it nothing changes.
       2. If ``stats`` is given: clip each band to [clip_min, clip_max], then
          normalise with (x - mean) / std. NaN propagates through both steps.
       3. Set every NaN to 0. After normalisation 0 is the train-split band mean,
@@ -66,6 +69,9 @@ class Sen1Floods11(Dataset):
         allow_missing: if False (default) raise when any chip lacks a file; if True
             drop such chips and print how many were kept. Only for partial local
             samples; keep False on the full dataset.
+        s2_augment: optional ``f(s2_raw, chip_id) -> s2_raw`` on the raw (13, H, W) S2 in
+            DN with NaN = missing, applied before band selection, clipping and
+            normalisation (floodfusion.transforms.SyntheticClouds). Never touches S1 or labels.
 
     Each item is ``{"id": str, "s1": (2,H,W) float32, "s2": (C,H,W) float32,
     "label": (H,W) int64}``, with only the requested modalities present.
@@ -80,6 +86,7 @@ class Sen1Floods11(Dataset):
         stats: Mapping[str, Mapping[str, Sequence[float]]] | None = None,
         transform: Callable[[dict], dict] | None = None,
         allow_missing: bool = False,
+        s2_augment: Callable[[np.ndarray, str], np.ndarray] | None = None,
     ) -> None:
         if split not in SPLITS:
             raise ValueError(f"split must be one of {SPLITS}, got {split!r}")
@@ -93,6 +100,7 @@ class Sen1Floods11(Dataset):
         self.split = split
         self.modalities = modalities
         self.transform = transform
+        self.s2_augment = s2_augment
 
         self.s2_bands = tuple(S2_BANDS if s2_bands is None else s2_bands)
         self._s2_idx = _band_indices(self.s2_bands, S2_BANDS)
@@ -136,6 +144,8 @@ class Sen1Floods11(Dataset):
 
     def _load_input(self, cid: str, mod: str) -> np.ndarray:
         x = load_raw(self.root, cid, mod)
+        if mod == "s2" and self.s2_augment is not None:
+            x = self.s2_augment(x, cid)  # raw DN, all 13 bands, before clipping/normalisation
         x = x[self._s2_idx] if mod == "s2" else x[self._s1_idx]
 
         if self._norm is not None:

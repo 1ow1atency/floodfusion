@@ -33,6 +33,17 @@ def fusion_cfg(cfg: dict, fusion: str = "cross_attention") -> dict:
     return resolve_config(c)
 
 
+def robust_cfg(cfg: dict, clouds: bool = True, dropout: bool = True) -> dict:
+    """cfg with synthetic clouds (p=1 so every chip gets some) and modality dropout on."""
+    c = copy.deepcopy(cfg)
+    c["augment"]["synthetic_clouds"].update(enabled=clouds, p=1.0)
+    c["augment"]["modality_dropout"].update(enabled=dropout, p_drop_s1=0.3, p_drop_s2=0.3)
+    # FusionNet runs an encoder only on samples that have its modality: with one such sample
+    # and 32 px crops its stride-32 BatchNorm would see a single value (1x1). Real 256 crops: 8x8.
+    c["data"]["crop_size"] = 64
+    return resolve_config(c)
+
+
 def _rows(run_dir: Path) -> list[dict]:
     with open(run_dir / "metrics.csv", newline="") as f:
         return list(csv.DictReader(f))
@@ -64,6 +75,23 @@ def test_fusion_config_matches_early_fusion_training_settings():
     a, b = dict(fus["train"]), dict(ref["train"])
     a.pop("save_last_every"), b.pop("save_last_every")
     assert a == b
+
+
+@pytest.mark.parametrize("robust, base", [("fusion_robust", "fusion"), ("early_fusion_robust", "early_fusion"),
+                                          ("s2_only_robust", "s2_only")])
+def test_robust_configs_differ_only_in_augment(robust, base):
+    r = resolve_config(load_config(REPO / "configs" / f"{robust}.yaml"))
+    b = resolve_config(load_config(REPO / "configs" / f"{base}.yaml"))
+    assert r["name"] == robust
+    sc, md = r["augment"]["synthetic_clouds"], r["augment"]["modality_dropout"]
+    assert sc == {"enabled": True, "p": 0.5, "coverage": [0.1, 1.0], "thin_p": 0.3}
+    assert md["enabled"] is (base != "s2_only")
+    if md["enabled"]:
+        assert (md["p_drop_s1"], md["p_drop_s2"]) == (0.1, 0.2)
+    assert not any(s["enabled"] for s in b["augment"].values())  # base configs: augmentation off
+    for c in (r, b):
+        c.pop("name"), c.pop("augment")
+    assert r == b  # identical seed, data, model and train settings
 
 
 @pytest.mark.parametrize("key, split", [("train_split", "bolivia"), ("train_split", "test"),
@@ -148,10 +176,15 @@ def _with(cfg, out, **train):
     (1, 2, 1, 1, "unet"),        # last.pt every epoch: nothing is lost
     (2, 4, 3, 2, "unet"),        # last.pt at 2 and 4: disconnect after 3 loses epoch 3, which is trained again
     (2, 3, 2, 2, "fusionnet"),   # FusionNet (cross-attention): same guarantee
+    (1, 2, 1, 1, "unet+aug"),    # synthetic clouds + modality dropout: augmentation RNG is restored too
+    (2, 3, 2, 2, "fusionnet+aug"),
 ])
 def test_resume_reproduces_an_uninterrupted_run(synth_cfg, tmp_path, every, epochs, stop_after, ckpt_epoch, arch):
+    arch, _, aug = arch.partition("+")
     if arch == "fusionnet":
         synth_cfg = fusion_cfg(synth_cfg)
+    if aug:
+        synth_cfg = robust_cfg(synth_cfg)
     a = run(_with(synth_cfg, tmp_path / "straight", save_last_every=every, epochs=epochs), device=CPU, log=quiet)
 
     interrupted = _with(synth_cfg, tmp_path / "interrupted", save_last_every=every, epochs=epochs)
@@ -267,17 +300,36 @@ def test_checkpoints_from_before_fusionnet_still_resume_and_evaluate(synth_cfg, 
     with pytest.raises(Disconnect):
         run(cfg, device=CPU, log=_stop_after_epoch(1))
     run_dir = Path(cfg["output_dir"]) / "tiny_seed0"
-    for name in ("last.pt", "best.pt"):
+    for name in ("last.pt", "best.pt"):  # no model.arch and no augment section, as before
         ck = load_checkpoint(run_dir / name)
         del ck["config"]["model"]["arch"]
+        del ck["config"]["augment"]
         torch.save(ck, run_dir / name)
     old = copy.deepcopy(cfg)
     del old["model"]["arch"]
+    del old["augment"]
     run(resolve_config(old), resume=True, device=CPU, log=quiet)
     res = evaluate(run_dir / "best.pt", "valid", out_dir=tmp_path / "ev", device=CPU, log=quiet)
     assert res["n_chips"] == 2
     with pytest.raises(ValueError, match="differ"):  # switching to fusionnet on resume is refused
         run(fusion_cfg(cfg), resume=True, device=CPU, log=quiet)
+
+
+def test_augment_section_absent_or_disabled_trains_identically(synth_cfg, tmp_path):
+    old = copy.deepcopy(synth_cfg)
+    del old["augment"]  # a config from before augmentation existed
+    a = run(_with(old, tmp_path / "a"), device=CPU, log=quiet)
+    b = run(_with(synth_cfg, tmp_path / "b"), device=CPU, log=quiet)
+    wa, wb = load_checkpoint(a / "last.pt")["model"], load_checkpoint(b / "last.pt")["model"]
+    assert all(torch.equal(wa[k], wb[k]) for k in wa)
+    assert json.loads((b / "run_info.json").read_text())["augment"] == "none"
+
+
+def test_s2_only_with_synthetic_clouds_trains(synth_cfg):
+    c = copy.deepcopy(synth_cfg)
+    c["data"]["modalities"] = ["s2"]
+    run_dir = run(robust_cfg(resolve_config(c), dropout=False), device=CPU, log=quiet)
+    assert "synthetic clouds" in json.loads((run_dir / "run_info.json").read_text())["augment"]
 
 
 def test_resume_errors(synth_cfg):

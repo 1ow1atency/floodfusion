@@ -7,11 +7,25 @@ normalisation and the -1 ignore label are unaffected. Randomness comes from torc
 which is seeded by seed_everything and per DataLoader worker by PyTorch.
 
 Validation/test: no transform (full 512 x 512 chips).
+
+Robustness augmentation (training only, off unless enabled in the config's ``augment``):
+  * SyntheticClouds: the dataset's ``s2_augment`` hook; adds synthetic clouds to the raw
+    S2 (DN) before clipping and normalisation (floodfusion.clouds_synth).
+  * ModalityDropout: after normalisation, drops S1 or S2 (never both) for the whole sample
+    by setting it to 0 (= the train-split band mean) and records ``modality_mask``
+    (S1 present, S2 present). FusionNet uses the mask; the U-Net simply sees the zeros.
+Both draw from torch's RNG, like the geometric transform, so runs (and resumes) are
+reproducible from the seed.
 """
 
 from __future__ import annotations
 
+from typing import Callable, Sequence
+
+import numpy as np
 import torch
+
+from .clouds_synth import THIN_P, cloudify
 
 DEFAULT_CROP = 256
 
@@ -60,4 +74,55 @@ class TrainTransform:
             for op in ops:
                 x = op(x)
             out[k] = x.contiguous()
+        return out
+
+
+class Compose:
+    def __init__(self, transforms: Sequence[Callable[[dict], dict]]):
+        self.transforms = list(transforms)
+
+    def __call__(self, sample: dict) -> dict:
+        for t in self.transforms:
+            sample = t(sample)
+        return sample
+
+
+class SyntheticClouds:
+    """With probability ``p``, clouds over a coverage drawn uniformly from ``coverage``
+    (min, max). Called by the dataset on raw S2 (13, H, W) in DN: ``f(s2, chip_id)``."""
+
+    def __init__(self, p: float, coverage: Sequence[float], thin_p: float = THIN_P):
+        lo, hi = (float(c) for c in coverage)
+        if not 0.0 <= p <= 1.0 or not 0.0 <= lo <= hi <= 1.0 or not 0.0 <= thin_p <= 1.0:
+            raise ValueError(f"need 0 <= p, thin_p <= 1 and 0 <= coverage min <= max <= 1, "
+                             f"got p={p}, coverage={coverage}, thin_p={thin_p}")
+        self.p, self.coverage, self.thin_p = float(p), (lo, hi), float(thin_p)
+
+    def __call__(self, s2: np.ndarray, chip_id: str | None = None) -> np.ndarray:
+        if float(torch.rand(())) >= self.p:
+            return s2
+        lo, hi = self.coverage
+        coverage = lo + (hi - lo) * float(torch.rand(()))
+        seed = int(torch.randint(0, 2**31 - 1, ()))
+        return cloudify(s2, coverage, seed, thin_p=self.thin_p)
+
+
+class ModalityDropout:
+    """Drop S2 with probability ``p_drop_s2`` or S1 with ``p_drop_s1`` (one uniform draw,
+    so never both), by zeroing it; adds ``modality_mask`` = (S1 present, S2 present)."""
+
+    def __init__(self, p_drop_s1: float, p_drop_s2: float):
+        if min(p_drop_s1, p_drop_s2) < 0 or p_drop_s1 + p_drop_s2 > 1:
+            raise ValueError(f"need p_drop_s1, p_drop_s2 >= 0 with sum <= 1, got {p_drop_s1}, {p_drop_s2}")
+        self.p_drop_s1, self.p_drop_s2 = float(p_drop_s1), float(p_drop_s2)
+
+    def __call__(self, sample: dict) -> dict:
+        if "s1" not in sample or "s2" not in sample:
+            raise KeyError("modality dropout needs both s1 and s2 in the sample")
+        u = float(torch.rand(()))
+        drop = "s2" if u < self.p_drop_s2 else "s1" if u < self.p_drop_s2 + self.p_drop_s1 else None
+        out = dict(sample)
+        if drop is not None:
+            out[drop] = torch.zeros_like(sample[drop])  # 0 = train band mean after normalisation
+        out["modality_mask"] = torch.tensor([drop != "s1", drop != "s2"])
         return out

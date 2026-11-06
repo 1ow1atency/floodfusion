@@ -164,6 +164,6 @@ def test_compute_cloud_cover_all_splits(root: Path):
 
 def test_rasters_stats_clouds_viz_do_not_import_torch():
     # torch's bundled OpenMP + LightGBM's (Homebrew) OpenMP in one process abort on macOS.
-    code = ("import sys, floodfusion.chips, floodfusion.clouds, floodfusion.stats, floodfusion.viz; "
+    code = ("import sys, floodfusion.chips, floodfusion.clouds, floodfusion.clouds_synth, floodfusion.stats, floodfusion.viz; "
             "sys.exit(int('torch' in sys.modules))")
     assert subprocess.run([sys.executable, "-c", code]).returncode == 0

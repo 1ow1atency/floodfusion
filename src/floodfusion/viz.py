@@ -207,6 +207,31 @@ def plot_cloud_examples(root: str | Path, examples: Sequence[tuple[dict, np.ndar
     return out_path
 
 
+def plot_true_colour_grid(rows: Sequence[tuple[str, Sequence[tuple[str, np.ndarray]]]], out_path: str | Path,
+                          title: str) -> Path:
+    """Grid of raw S2 (13, H, W) true colour images: ``rows`` = [(row label, [(panel title,
+    s2), ...]), ...]. Same display scale as every other true colour figure."""
+    ncols = max(len(panels) for _, panels in rows)
+    fig, axes = plt.subplots(len(rows), ncols, figsize=(3.3 * ncols, 3.6 * len(rows)), constrained_layout=True,
+                             squeeze=False)
+    for ax in axes.ravel():
+        ax.set_axis_off()
+    for r, (label, panels) in enumerate(rows):
+        for c, (panel_title, s2) in enumerate(panels):
+            ax = axes[r, c]
+            ax.set_axis_on(); ax.set_xticks([]); ax.set_yticks([])
+            ax.imshow(composite(s2, TRUE_COLOUR, TRUE_COLOUR_SCALE), interpolation="nearest")
+            ax.set_title(panel_title, fontsize=9)
+            if c == 0:
+                ax.set_ylabel(label, fontsize=11)
+    fig.suptitle(f"{title}  |  true colour (B4, B3, B2) / {TRUE_COLOUR_SCALE:.0f}  |  magenta = missing S2", fontsize=12)
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=90)
+    plt.close(fig)
+    return out_path
+
+
 def plot_training_curves(metrics_csv: str | Path, out_path: str | Path, title: str = "") -> Path:
     """Train loss and valid water IoU per epoch from a run's metrics.csv; best epoch marked."""
     import csv

@@ -7,6 +7,7 @@ pointed at a local git repo and a fake google.colab.userdata. No network is used
 from __future__ import annotations
 
 import base64
+import re
 import json
 import subprocess
 import sys
@@ -189,6 +190,8 @@ def test_train_notebook_contract():
     exec(settings, ns)
     assert set(k for k in ns if not k.startswith("__")) == {"CONFIG", "SEED", "USE_WANDB"}
     assert (REPO / ns["CONFIG"]).is_file()
+    listed = set(re.findall(r"\w+", settings))
+    assert {c.stem for c in (REPO / "configs").glob("*.yaml")} <= listed  # every config is offered
     joined = "\n".join(code)
     # torch and s2cloudless must never meet: nothing from the clouds extra.
     assert "clouds" not in joined and "s2cloudless" not in joined

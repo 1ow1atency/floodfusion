@@ -22,6 +22,10 @@ axis) or "fusionnet" (separate s1 / s2 inputs plus an (N, 2) modality mask; see
 floodfusion.models). ``forward_model`` is the only place that knows the difference. The
 mask is ``batch["modality_mask"]`` if the batch has one, else all modalities present.
 
+Robustness augmentation (config section ``augment``, training split only, off by default):
+synthetic clouds on raw S2 and modality dropout (floodfusion.transforms). Validation
+always uses the real, unmodified valid split.
+
 Resume: last.pt holds model, optimizer, scheduler, AMP scaler, completed epoch, best
 score and RNG states (Python, NumPy, torch, CUDA, DataLoader generator). It is written
 to a temporary file and renamed, so a disconnect cannot leave a half-written file.
@@ -58,7 +62,7 @@ from .data import Sen1Floods11
 from .losses import CEDiceLoss
 from .metrics import WaterConfusion
 from .models import ARCHS, FUSIONS, build_model, count_parameters
-from .transforms import TrainTransform
+from .transforms import Compose, ModalityDropout, SyntheticClouds, TrainTransform
 from .utils import seed_everything
 
 TRAIN_SPLIT, VAL_SPLIT = "train", "valid"
@@ -71,10 +75,16 @@ METRIC_COLUMNS = ("epoch", "lr", "train_loss", "val_loss", "val_iou", "val_f1", 
 # Config keys that must not change when resuming (paths, workers and W&B may).
 _RESUME_FIXED = {"data": ("stats", "modalities", "s2_bands", "train_split", "val_split", "crop_size"),
                  "model": ("arch", "encoder", "encoder_weights", "fusion", "attention_heads"),
-                 "train": None}  # None = whole section
+                 "train": None,  # None = whole section
+                 "augment": None}
 # ...except these, which do not affect training and may change on resume.
 _RESUME_FREE = {"train": ("save_last_every",)}
 DEFAULT_SAVE_LAST_EVERY = 5
+# Robustness augmentation defaults (all off). See configs/*_robust.yaml for the values used.
+AUGMENT_DEFAULTS = {
+    "synthetic_clouds": {"enabled": False, "p": 0.5, "coverage": [0.1, 1.0], "thin_p": 0.3},
+    "modality_dropout": {"enabled": False, "p_drop_s1": 0.1, "p_drop_s2": 0.2},
+}
 REPO_ROOT = Path(__file__).resolve().parents[2]
 _TRAIN_STATE_KEYS = ("optimizer", "scheduler", "scaler", "rng")
 
@@ -122,6 +132,7 @@ def resolve_config(cfg: dict, root: str | None = None, out: str | None = None,
     if isinstance(k, bool) or not isinstance(k, int) or k < 1:
         raise ValueError(f"train.save_last_every must be an integer >= 1, got {k!r}")
     _apply_model_defaults(cfg)
+    _apply_augment_defaults(cfg)
     cfg["train"].setdefault("amp", True)
     cfg["train"].setdefault("ce_weight", 1.0)
     cfg["train"].setdefault("dice_weight", 1.0)
@@ -148,6 +159,44 @@ def _apply_model_defaults(cfg: dict) -> None:
             raise ValueError(f"model.attention_heads must be an integer >= 1, got {h!r}")
         if tuple(cfg["data"]["modalities"]) != ("s1", "s2"):
             raise ValueError(f"fusionnet needs data.modalities [s1, s2], got {list(cfg['data']['modalities'])}")
+
+
+def _apply_augment_defaults(cfg: dict) -> None:
+    """Fill the ``augment`` section (configs from before it existed have none: all off)
+    and validate it."""
+    aug = cfg.setdefault("augment", {}) or {}
+    cfg["augment"] = aug
+    unknown = set(aug) - set(AUGMENT_DEFAULTS)
+    if unknown:
+        raise ValueError(f"unknown augment section(s) {sorted(unknown)}; known: {list(AUGMENT_DEFAULTS)}")
+    for name, defaults in AUGMENT_DEFAULTS.items():
+        sec = aug.setdefault(name, {})
+        bad = set(sec) - set(defaults)
+        if bad:
+            raise ValueError(f"augment.{name}: unknown key(s) {sorted(bad)}; known: {list(defaults)}")
+        for k, v in defaults.items():
+            sec.setdefault(k, copy.deepcopy(v))
+        if not isinstance(sec["enabled"], bool):
+            raise ValueError(f"augment.{name}.enabled must be true or false, got {sec['enabled']!r}")
+    mods = tuple(cfg["data"]["modalities"])
+    sc, md = aug["synthetic_clouds"], aug["modality_dropout"]
+    SyntheticClouds(sc["p"], sc["coverage"], sc["thin_p"])  # validates the values
+    ModalityDropout(md["p_drop_s1"], md["p_drop_s2"])
+    if sc["enabled"] and "s2" not in mods:
+        raise ValueError("augment.synthetic_clouds needs s2 in data.modalities")
+    if md["enabled"] and mods != ("s1", "s2"):
+        raise ValueError(f"augment.modality_dropout needs data.modalities [s1, s2], got {list(mods)}")
+
+
+def augment_description(cfg: dict) -> str:
+    aug = cfg.get("augment") or {}
+    sc, md = aug.get("synthetic_clouds", {}), aug.get("modality_dropout", {})
+    parts = []
+    if sc.get("enabled"):
+        parts.append(f"synthetic clouds p={sc['p']} coverage={sc['coverage']} thin_p={sc['thin_p']}")
+    if md.get("enabled"):
+        parts.append(f"modality dropout p_drop_s1={md['p_drop_s1']} p_drop_s2={md['p_drop_s2']}")
+    return "; ".join(parts) or "none"
 
 
 def model_description(cfg: dict) -> str:
@@ -237,7 +286,14 @@ def make_loaders(cfg: dict, stats: dict, smoke: bool, device: torch.device, gene
     d, t = cfg["data"], cfg["train"]
     mods = check_modalities(cfg)
     common = dict(root=d["root"], modalities=mods, s2_bands=d.get("s2_bands"), stats=stats, allow_missing=smoke)
-    train_ds = Sen1Floods11(split=d["train_split"], transform=TrainTransform(d["crop_size"]), **common)
+    aug = copy.deepcopy(cfg)
+    _apply_augment_defaults(aug)
+    sc, md = aug["augment"]["synthetic_clouds"], aug["augment"]["modality_dropout"]
+    clouds = SyntheticClouds(sc["p"], sc["coverage"], sc["thin_p"]) if sc["enabled"] else None
+    transform = TrainTransform(d["crop_size"])
+    if md["enabled"]:
+        transform = Compose([transform, ModalityDropout(md["p_drop_s1"], md["p_drop_s2"])])
+    train_ds = Sen1Floods11(split=d["train_split"], transform=transform, s2_augment=clouds, **common)
     if smoke:
         val_ds = Subset(Sen1Floods11(split=d["train_split"], **common), range(min(SMOKE_VAL_CHIPS, len(train_ds))))
         bs, val_bs, workers = min(t["batch_size"], 2), 1, 0
@@ -333,6 +389,7 @@ def load_checkpoint(path: str | Path, map_location="cpu") -> dict:
 def _fixed_part(cfg: dict) -> dict:
     cfg = copy.deepcopy(cfg)
     _apply_model_defaults(cfg)  # checkpoints from before FusionNet have no model.arch
+    _apply_augment_defaults(cfg)  # ... and none from before augmentation have an augment section
     out = {s: (dict(cfg[s]) if keys is None else {k: cfg[s].get(k) for k in keys}) for s, keys in _RESUME_FIXED.items()}
     for s, keys in _RESUME_FREE.items():
         for k in keys:
@@ -444,6 +501,7 @@ def run(cfg: dict, *, resume: bool = False, smoke: bool = False, max_batches: in
                 "device": str(device), "amp": amp, "torch": torch.__version__,
                 "command": " ".join(sys.argv), "model": model_description(cfg), "arch": cfg["model"]["arch"],
                 "fusion": cfg["model"].get("fusion"), "n_params": count_parameters(model),
+                "augment": augment_description(cfg),
                 "in_channels": in_channels(cfg), "modalities": list(mods),
                 "n_train_chips": len(train_loader.dataset), "n_val_chips": len(val_loader.dataset),
                 "steps_per_epoch": steps_per_epoch}
@@ -451,7 +509,7 @@ def run(cfg: dict, *, resume: bool = False, smoke: bool = False, max_batches: in
     info_path.write_text(json.dumps(info, indent=2) + "\n")
 
     wandb_run = _init_wandb(cfg, run_dir, wandb_id) if cfg["wandb"]["enabled"] else None
-    log(f"run {run_dir} | device {device} | amp {amp} | {model_description(cfg)} | "
+    log(f"run {run_dir} | device {device} | amp {amp} | {model_description(cfg)} | augment: {augment_description(cfg)} | "
         f"{len(train_loader.dataset)} train chips, {len(val_loader.dataset)} val chips | "
         f"{steps_per_epoch} steps/epoch | epochs {start_epoch}..{epochs}")
 
