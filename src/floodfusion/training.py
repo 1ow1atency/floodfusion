@@ -9,14 +9,23 @@ Rules enforced here (CLAUDE.md):
 
 Run folder: ``<output_dir>/<name>_seed<seed>`` (``..._smoke`` in smoke mode) with
 config.yaml (resolved), run_info.json (git commit, seed, device, resumes), metrics.csv
-(one row per epoch), last.pt (every epoch, full training state) and best.pt (best valid
-water IoU; model weights, config and stats only).
+(one row per epoch), last.pt (full training state, every ``train.save_last_every``
+epochs and always on the final epoch) and best.pt (written whenever valid water IoU
+improves; model weights, config and stats only).
+
+save_last_every (default 5): last.pt is ~294 MB for ResNet34 + AdamW, and on a
+Colab-mounted Drive every replaced version can go to Drive's Bin and count against the
+quota, so it is not rewritten every epoch.
 
 Resume: last.pt holds model, optimizer, scheduler, AMP scaler, completed epoch, best
 score and RNG states (Python, NumPy, torch, CUDA, DataLoader generator). It is written
 to a temporary file and renamed, so a disconnect cannot leave a half-written file.
 ``resume=True`` restores all of it and continues with the next epoch; metrics.csv
-rows after the checkpoint's epoch are dropped. At most the interrupted epoch is lost.
+rows after the checkpoint's epoch are dropped and those epochs are trained again, so
+at most ``save_last_every`` epochs are lost. If best.pt is newer than last.pt (it was
+written during the lost epochs), it was still selected on valid only and the earlier
+best has been overwritten, so it is kept: its score becomes the best to beat, and the
+resume entry in run_info.json records it.
 """
 
 from __future__ import annotations
@@ -58,6 +67,9 @@ METRIC_COLUMNS = ("epoch", "lr", "train_loss", "val_loss", "val_iou", "val_f1", 
 _RESUME_FIXED = {"data": ("stats", "modalities", "s2_bands", "train_split", "val_split", "crop_size"),
                  "model": ("encoder", "encoder_weights"),
                  "train": None}  # None = whole section
+# ...except these, which do not affect training and may change on resume.
+_RESUME_FREE = {"train": ("save_last_every",)}
+DEFAULT_SAVE_LAST_EVERY = 5
 REPO_ROOT = Path(__file__).resolve().parents[2]
 _TRAIN_STATE_KEYS = ("optimizer", "scheduler", "scaler", "rng")
 
@@ -83,7 +95,8 @@ def load_config(path: str | Path) -> dict:
 
 
 def resolve_config(cfg: dict, root: str | None = None, out: str | None = None,
-                   no_wandb: bool = False, seed: int | None = None) -> dict:
+                   no_wandb: bool = False, seed: int | None = None,
+                   save_last_every: int | None = None) -> dict:
     """Apply CLI overrides and defaults. The resolved config is saved in the run folder,
     so a run stays reproducible from its own files."""
     cfg = copy.deepcopy(cfg)
@@ -97,6 +110,12 @@ def resolve_config(cfg: dict, root: str | None = None, out: str | None = None,
     cfg["data"].setdefault("val_split", VAL_SPLIT)
     cfg["data"].setdefault("s2_bands", None)
     cfg["train"].setdefault("min_lr_ratio", 0.01)
+    if save_last_every is not None:
+        cfg["train"]["save_last_every"] = save_last_every
+    cfg["train"].setdefault("save_last_every", DEFAULT_SAVE_LAST_EVERY)
+    k = cfg["train"]["save_last_every"]
+    if isinstance(k, bool) or not isinstance(k, int) or k < 1:
+        raise ValueError(f"train.save_last_every must be an integer >= 1, got {k!r}")
     cfg["train"].setdefault("amp", True)
     cfg["train"].setdefault("ce_weight", 1.0)
     cfg["train"].setdefault("dice_weight", 1.0)
@@ -268,7 +287,11 @@ def load_checkpoint(path: str | Path, map_location="cpu") -> dict:
 
 
 def _fixed_part(cfg: dict) -> dict:
-    return {s: (cfg[s] if keys is None else {k: cfg[s].get(k) for k in keys}) for s, keys in _RESUME_FIXED.items()}
+    out = {s: (dict(cfg[s]) if keys is None else {k: cfg[s].get(k) for k in keys}) for s, keys in _RESUME_FIXED.items()}
+    for s, keys in _RESUME_FREE.items():
+        for k in keys:
+            out[s].pop(k, None)
+    return out
 
 
 # ----------------------------------------------------------------------------- metrics.csv
@@ -349,11 +372,21 @@ def run(cfg: dict, *, resume: bool = False, smoke: bool = False, max_batches: in
         scaler.load_state_dict(ckpt["scaler"])
         _set_rng_state(ckpt["rng"], generator)
         start_epoch, best_iou, best_epoch = ckpt["epoch"] + 1, ckpt["best_val_iou"], ckpt["best_epoch"]
+        resume_note = {"from_epoch": ckpt["epoch"], "at": _now(), **git_info()}
+        if best_path.is_file():
+            b = load_checkpoint(best_path)
+            if b["epoch"] > ckpt["epoch"] and b["val_iou"] > best_iou:
+                best_iou, best_epoch = b["val_iou"], b["epoch"]
+                resume_note["kept_newer_best"] = {"epoch": b["epoch"], "val_iou": b["val_iou"]}
+                log(f"best.pt is from epoch {b['epoch']} (after last.pt): keeping it as the best to beat "
+                    f"(valid IoU {b['val_iou']:.4f}); epochs {start_epoch}.. are trained again")
         wandb_id = ckpt.get("wandb_id")
-        rows = [r for r in _read_metrics(metrics_path) if int(r["epoch"]) <= ckpt["epoch"]]
+        all_rows = _read_metrics(metrics_path)
+        rows = [r for r in all_rows if int(r["epoch"]) <= ckpt["epoch"]]
+        resume_note["epochs_retrained"] = [int(r["epoch"]) for r in all_rows if int(r["epoch"]) > ckpt["epoch"]]
         _write_metrics(metrics_path, rows)
         info = json.loads(info_path.read_text())
-        info.setdefault("resumes", []).append({"from_epoch": ckpt["epoch"], "at": _now(), **git_info()})
+        info.setdefault("resumes", []).append(resume_note)
         log(f"Resumed {run_dir} after epoch {ckpt['epoch']} (best valid IoU {best_iou:.4f} at epoch {best_epoch})")
     else:
         rows = []
@@ -396,7 +429,8 @@ def run(cfg: dict, *, resume: bool = False, smoke: bool = False, max_batches: in
                 "wandb_id": wandb_run.id if wandb_run else wandb_id, **git_info()}
         if improved:  # best.pt is for evaluation only: no optimizer/scheduler/scaler/RNG (~1/3 the size)
             save_atomic({k: v for k, v in ckpt.items() if k not in _TRAIN_STATE_KEYS}, best_path)
-        save_atomic(ckpt, last_path)
+        if epoch % int(cfg["train"]["save_last_every"]) == 0 or epoch == epochs:
+            save_atomic(ckpt, last_path)
         if wandb_run:
             wandb_run.log({k: v for k, v in row.items() if k != "epoch"}, step=epoch)
             wandb_run.summary.update({"best_val_iou": best_iou, "best_epoch": best_epoch})

@@ -19,6 +19,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--root", help="override data.root")
     p.add_argument("--out", help="override output_dir")
     p.add_argument("--seed", type=int, help="override the config seed (saved in the run's config.yaml)")
+    p.add_argument("--save-last-every", type=int, metavar="N",
+                   help="write last.pt every N epochs and on the final epoch (default: config, else 5)")
     p.add_argument("--no-wandb", action="store_true", help="disable Weights & Biases logging")
     p.add_argument("--resume", action="store_true", help="continue the run from its last.pt")
     p.add_argument("--smoke", action="store_true",
@@ -26,7 +28,7 @@ def main(argv: list[str] | None = None) -> None:
     args = p.parse_args(argv)
 
     cfg = resolve_config(load_config(args.config), root=args.root, out=args.out, no_wandb=args.no_wandb,
-                         seed=args.seed)
+                         seed=args.seed, save_last_every=args.save_last_every)
     run(cfg, resume=args.resume, smoke=args.smoke)
 
 

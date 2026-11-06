@@ -26,6 +26,8 @@ train:
   min_lr_ratio: 0.01
   weight_decay: 1.0e-2             # decoupled (AdamW) weight decay, PyTorch default
   amp: true                        # float16 mixed precision on CUDA only
+  save_last_every: 5               # last.pt (~294 MB) every 5 epochs + final epoch; a resume
+                                   # loses at most 5 epochs. best.pt is written whenever valid IoU improves.
   ce_weight: 1.0
   dice_weight: 1.0
 

@@ -117,27 +117,88 @@ def _stop_after_epoch(n):
     return log
 
 
-def test_resume_reproduces_an_uninterrupted_run(synth_cfg, tmp_path):
-    straight = copy.deepcopy(synth_cfg)
-    straight["output_dir"] = str(tmp_path / "straight")
-    a = run(straight, device=CPU, log=quiet)
+def _with(cfg, out, **train):
+    c = copy.deepcopy(cfg)
+    c["output_dir"] = str(out)
+    c["train"].update(train)
+    return c
 
-    interrupted = copy.deepcopy(synth_cfg)
-    interrupted["output_dir"] = str(tmp_path / "interrupted")
+
+@pytest.mark.parametrize("every, epochs, stop_after, ckpt_epoch", [
+    (1, 2, 1, 1),   # last.pt every epoch: nothing is lost
+    (2, 4, 3, 2),   # last.pt at 2 and 4: disconnect after 3 loses epoch 3, which is trained again
+])
+def test_resume_reproduces_an_uninterrupted_run(synth_cfg, tmp_path, every, epochs, stop_after, ckpt_epoch):
+    a = run(_with(synth_cfg, tmp_path / "straight", save_last_every=every, epochs=epochs), device=CPU, log=quiet)
+
+    interrupted = _with(synth_cfg, tmp_path / "interrupted", save_last_every=every, epochs=epochs)
     with pytest.raises(Disconnect):
-        run(interrupted, device=CPU, log=_stop_after_epoch(1))
-    # A metrics row written after the checkpoint (e.g. by a later, unsaved epoch) is dropped.
+        run(interrupted, device=CPU, log=_stop_after_epoch(stop_after))
     b_dir = Path(interrupted["output_dir"]) / "tiny_seed0"
-    with open(b_dir / "metrics.csv", "a") as f:
-        f.write("99" + "," * 14 + "\n")
+    assert load_checkpoint(b_dir / "last.pt")["epoch"] == ckpt_epoch
+    assert len(_rows(b_dir)) == stop_after          # metrics.csv was ahead of last.pt
     b = run(interrupted, resume=True, device=CPU, log=quiet)
 
     wa, wb = load_checkpoint(a / "last.pt")["model"], load_checkpoint(b / "last.pt")["model"]
     assert all(torch.equal(wa[k], wb[k]) for k in wa), "resumed run diverged from the uninterrupted one"
     ra, rb = _rows(a), _rows(b)
-    assert [r["epoch"] for r in rb] == ["1", "2"]
+    assert [r["epoch"] for r in rb] == [str(e) for e in range(1, epochs + 1)]  # no duplicated epochs
     assert [r["val_iou"] for r in ra] == [r["val_iou"] for r in rb]
-    assert len(json.loads((b / "run_info.json").read_text())["resumes"]) == 1
+    (resume,) = json.loads((b / "run_info.json").read_text())["resumes"]
+    assert resume["from_epoch"] == ckpt_epoch
+    assert resume["epochs_retrained"] == list(range(ckpt_epoch + 1, stop_after + 1))
+    assert len(resume["epochs_retrained"]) <= every   # at most save_last_every epochs lost
+
+
+def test_last_pt_schedule(synth_cfg, tmp_path, monkeypatch):
+    import floodfusion.training as training
+
+    saved, real = [], training.save_atomic
+    monkeypatch.setattr(training, "save_atomic", lambda obj, path: (saved.append((path.name, obj["epoch"])),
+                                                                     real(obj, path)))
+    run_dir = run(_with(synth_cfg, tmp_path / "a", save_last_every=2, epochs=5), device=CPU, log=quiet)
+    assert [e for name, e in saved if name == "last.pt"] == [2, 4, 5]   # every 2 + always the final epoch
+    improved, running = [], float("-inf")
+    for r in _rows(run_dir):
+        if r["val_iou"] and float(r["val_iou"]) > running:
+            improved.append(int(r["epoch"]))
+            running = float(r["val_iou"])
+    assert [e for name, e in saved if name == "best.pt"] == improved     # best.pt on every improvement
+
+    saved.clear()
+    run(_with(synth_cfg, tmp_path / "b", epochs=2), device=CPU, log=quiet)  # default 5 > epochs
+    assert [e for name, e in saved if name == "last.pt"] == [2]
+
+
+def test_resume_keeps_best_pt_written_after_last_pt(synth_cfg, tmp_path):
+    cfg = _with(synth_cfg, tmp_path, save_last_every=2, epochs=4)
+    with pytest.raises(Disconnect):
+        run(cfg, device=CPU, log=_stop_after_epoch(3))
+    run_dir = Path(cfg["output_dir"]) / "tiny_seed0"
+    # Make best.pt come from the lost epoch 3 with an unbeatable score.
+    best = load_checkpoint(run_dir / "best.pt")
+    best.update(epoch=3, val_iou=1.0)
+    torch.save(best, run_dir / "best.pt")
+    msgs = []
+    run(cfg, resume=True, device=CPU, log=msgs.append)
+    assert any("keeping it as the best to beat" in m for m in msgs)
+    final_best, last = load_checkpoint(run_dir / "best.pt"), load_checkpoint(run_dir / "last.pt")
+    assert (final_best["epoch"], final_best["val_iou"]) == (3, 1.0)        # not replaced by a worse model
+    assert (last["best_epoch"], last["best_val_iou"]) == (3, 1.0)
+    (resume,) = json.loads((run_dir / "run_info.json").read_text())["resumes"]
+    assert resume["kept_newer_best"] == {"epoch": 3, "val_iou": 1.0}
+
+
+def test_save_last_every_validation_and_change_on_resume(synth_cfg, tmp_path):
+    for bad in (0, -1, 2.5, True):
+        with pytest.raises(ValueError, match="save_last_every"):
+            resolve_config(synth_cfg, save_last_every=bad)
+    assert resolve_config({**synth_cfg, "train": {k: v for k, v in synth_cfg["train"].items()
+                                                  if k != "save_last_every"}})["train"]["save_last_every"] == 5
+    cfg = _with(synth_cfg, tmp_path, save_last_every=2, epochs=4)
+    with pytest.raises(Disconnect):
+        run(cfg, device=CPU, log=_stop_after_epoch(2))
+    run(resolve_config(cfg, save_last_every=1), resume=True, device=CPU, log=quiet)  # allowed: not training-relevant
 
 
 def test_resume_errors(synth_cfg):
@@ -194,7 +255,7 @@ def test_scripts_run_end_to_end(synth_cfg, tmp_path):
     cfg_path = tmp_path / "cfg.yaml"
     cfg_path.write_text(yaml.safe_dump(synth_cfg))
     subprocess.run([sys.executable, str(REPO / "scripts" / "train.py"), "--config", str(cfg_path),
-                    "--out", str(tmp_path / "cli"), "--no-wandb", "--seed", "3"], check=True, capture_output=True)
+                    "--out", str(tmp_path / "cli"), "--no-wandb", "--seed", "3", "--save-last-every", "1"], check=True, capture_output=True)
     ckpt = tmp_path / "cli" / "tiny_seed3" / "best.pt"
     assert yaml.safe_load((ckpt.parent / "config.yaml").read_text())["seed"] == 3
     r = subprocess.run([sys.executable, str(REPO / "scripts" / "evaluate.py"), "--checkpoint", str(ckpt),
