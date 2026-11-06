@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "floodfusion"
+version = "0.1.0"
+description = "Cloud-robust flood mapping by fusing Sentinel-1 SAR and Sentinel-2 optical imagery."
+readme = "README.md"
+# Kept loose so the same package installs on Colab's Python version.
+requires-python = ">=3.10"
+dependencies = [
+    "torch",
+    "torchvision",
+    "rasterio",
+    "numpy",
+    "matplotlib",
+    "pyyaml",
+    "tqdm",
+    "segmentation-models-pytorch",
+    "wandb",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

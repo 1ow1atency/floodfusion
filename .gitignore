@@ -1,0 +1,21 @@
+# Data and experiment outputs (live on Google Drive, never in git)
+data/
+outputs/
+checkpoints/
+*.ckpt
+*.pt
+*.pth
+wandb/
+
+# Environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
