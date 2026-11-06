@@ -1,0 +1,35 @@
+# U-Net baseline: S1 + S2 stacked on the channel axis, S1 first: 2 + 13 = 15 channels.
+# All three baselines share every setting except data.modalities, so they differ only in input.
+name: early_fusion
+seed: 0
+output_dir: /content/drive/MyDrive/floodfusion/runs   # one folder per run: <output_dir>/<name>_seed<seed>
+
+data:
+  root: /content/drive/MyDrive/floodfusion/data/sen1floods11
+  stats: configs/band_stats.json   # train-split stats (relative to the repo root; run from there)
+  modalities: [s1, s2]
+  s2_bands: null                   # null = all 13 S2 bands
+  train_split: train
+  val_split: valid                 # model selection on valid only; test/bolivia are refused
+  crop_size: 256                   # random 256x256 training crops; validation uses full 512x512 chips
+  num_workers: 2                   # Colab gives 2 vCPUs
+
+model:
+  encoder: resnet34
+  encoder_weights: imagenet
+
+train:
+  batch_size: 16                   # 15 full steps per epoch on 252 train chips; ~4 GB on a T4 with AMP
+  val_batch_size: 8                # full 512x512 chips, no gradients
+  epochs: 100                      # each epoch sees every chip once, as one random quarter-size crop
+  lr: 5.0e-4                       # AdamW; cosine decay per step down to lr * min_lr_ratio
+  min_lr_ratio: 0.01
+  weight_decay: 1.0e-2             # decoupled (AdamW) weight decay, PyTorch default
+  amp: true                        # float16 mixed precision on CUDA only
+  ce_weight: 1.0
+  dice_weight: 1.0
+
+wandb:
+  enabled: true                    # --no-wandb (or enabled: false) to run without it
+  project: floodfusion
+  entity: null
