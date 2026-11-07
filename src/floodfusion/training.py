@@ -26,6 +26,14 @@ Robustness augmentation (config section ``augment``, training split only, off by
 synthetic clouds on raw S2 and modality dropout (floodfusion.transforms). Validation
 always uses the real, unmodified valid split.
 
+Model selection: best.pt is chosen on ``val_iou`` (real valid split) for every model.
+``val_iou_cloud50`` is information only: valid water IoU with fixed thick synthetic clouds
+at 50% coverage (clouds_synth.FixedClouds, seeded per chip id, so identical in every epoch
+and for every model). Its loader has its own fixed generator and the clouds use their own
+seeds, so it never draws from the training RNG: best.pt, the training trajectory and
+resume are exactly as without it. Models without S2 get ``val_iou`` (clouds do not change
+their input).
+
 Resume: last.pt holds model, optimizer, scheduler, AMP scaler, completed epoch, best
 score and RNG states (Python, NumPy, torch, CUDA, DataLoader generator). It is written
 to a temporary file and renamed, so a disconnect cannot leave a half-written file.
@@ -58,6 +66,7 @@ import yaml
 from torch.utils.data import DataLoader, Subset
 
 from .chips import S2_BANDS
+from .clouds_synth import FixedClouds
 from .data import Sen1Floods11
 from .losses import CEDiceLoss
 from .metrics import WaterConfusion
@@ -69,7 +78,8 @@ TRAIN_SPLIT, VAL_SPLIT = "train", "valid"
 EVAL_ONLY_SPLITS = ("test", "bolivia")
 SMOKE_BATCHES = 2
 SMOKE_VAL_CHIPS = 2
-METRIC_COLUMNS = ("epoch", "lr", "train_loss", "val_loss", "val_iou", "val_f1", "val_precision",
+VAL_CLOUD_COVERAGE = 0.5  # val_iou_cloud50: thick clouds over 50% of every valid chip
+METRIC_COLUMNS = ("epoch", "lr", "train_loss", "val_loss", "val_iou", "val_iou_cloud50", "val_f1", "val_precision",
                   "val_recall", "val_accuracy", "val_tp", "val_fp", "val_fn", "val_tn",
                   "best_val_iou", "epoch_time_s")
 # Config keys that must not change when resuming (paths, workers and W&B may).
@@ -283,7 +293,7 @@ def load_stats(cfg: dict) -> dict:
 
 
 def make_loaders(cfg: dict, stats: dict, smoke: bool, device: torch.device, generator: torch.Generator):
-    d, t = cfg["data"], cfg["train"]
+    d = cfg["data"]
     mods = check_modalities(cfg)
     common = dict(root=d["root"], modalities=mods, s2_bands=d.get("s2_bands"), stats=stats, allow_missing=smoke)
     aug = copy.deepcopy(cfg)
@@ -294,18 +304,43 @@ def make_loaders(cfg: dict, stats: dict, smoke: bool, device: torch.device, gene
     if md["enabled"]:
         transform = Compose([transform, ModalityDropout(md["p_drop_s1"], md["p_drop_s2"])])
     train_ds = Sen1Floods11(split=d["train_split"], transform=transform, s2_augment=clouds, **common)
-    if smoke:
-        val_ds = Subset(Sen1Floods11(split=d["train_split"], **common), range(min(SMOKE_VAL_CHIPS, len(train_ds))))
-        bs, val_bs, workers = min(t["batch_size"], 2), 1, 0
-    else:
-        val_ds = Sen1Floods11(split=d["val_split"], **common)
-        bs, val_bs, workers = t["batch_size"], t["val_batch_size"], d["num_workers"]
+    val_ds, (bs, val_bs, workers) = _val_dataset(cfg, smoke, common, len(train_ds)), _batch_sizes(cfg, smoke)
     loader_kw = dict(num_workers=workers, pin_memory=device.type == "cuda", persistent_workers=workers > 0)
     train_loader = DataLoader(train_ds, batch_size=bs, shuffle=True, drop_last=True, generator=generator, **loader_kw)
     val_loader = DataLoader(val_ds, batch_size=val_bs, shuffle=False, **loader_kw)
     if len(train_loader) == 0:
         raise ValueError(f"train split has {len(train_ds)} chips, fewer than batch_size {bs}")
     return train_loader, val_loader
+
+
+def _batch_sizes(cfg: dict, smoke: bool) -> tuple[int, int, int]:
+    t = cfg["train"]
+    return (min(t["batch_size"], 2), 1, 0) if smoke else (t["batch_size"], t["val_batch_size"], cfg["data"]["num_workers"])
+
+
+def _val_dataset(cfg: dict, smoke: bool, common: dict, n_train: int, s2_augment=None):
+    d = cfg["data"]
+    if smoke:  # 2 TRAIN chips: the valid split may be missing in the local sample
+        return Subset(Sen1Floods11(split=d["train_split"], s2_augment=s2_augment, **common),
+                      range(min(SMOKE_VAL_CHIPS, n_train)))
+    return Sen1Floods11(split=d["val_split"], s2_augment=s2_augment, **common)
+
+
+def make_cloud_val_loader(cfg: dict, stats: dict, smoke: bool, device: torch.device,
+                          n_train: int = 0) -> DataLoader | None:
+    """The validation chips with fixed thick synthetic clouds at VAL_CLOUD_COVERAGE (information
+    only). None for models without S2. Own fixed generator: iterating it never draws from
+    torch's global RNG (a DataLoader without a generator draws its base seed from there)."""
+    d = cfg["data"]
+    mods = check_modalities(cfg)
+    if "s2" not in mods:
+        return None
+    common = dict(root=d["root"], modalities=mods, s2_bands=d.get("s2_bands"), stats=stats, allow_missing=smoke)
+    ds = _val_dataset(cfg, smoke, common, n_train, s2_augment=FixedClouds(VAL_CLOUD_COVERAGE, thin=False))
+    _, val_bs, workers = _batch_sizes(cfg, smoke)
+    return DataLoader(ds, batch_size=val_bs, shuffle=False, num_workers=workers,
+                      pin_memory=device.type == "cuda", persistent_workers=workers > 0,
+                      generator=torch.Generator().manual_seed(0))
 
 
 # ----------------------------------------------------------------------------- loops
@@ -422,8 +457,10 @@ def _fmt(v):
 # ----------------------------------------------------------------------------- main entry
 
 def run(cfg: dict, *, resume: bool = False, smoke: bool = False, max_batches: int | None = None,
-        device: str | torch.device | None = None, log=print) -> Path:
-    """Train according to ``cfg`` (already resolved). Returns the run folder."""
+        device: str | torch.device | None = None, log=print, cloud_val: bool = True) -> Path:
+    """Train according to ``cfg`` (already resolved). Returns the run folder.
+    ``cloud_val=False`` skips the information-only val_iou_cloud50 (NaN); used by tests to
+    show it changes nothing else."""
     check_splits(cfg)
     mods = check_modalities(cfg)
     if smoke:
@@ -450,6 +487,7 @@ def run(cfg: dict, *, resume: bool = False, smoke: bool = False, max_batches: in
 
     stats = load_stats(cfg)
     train_loader, val_loader = make_loaders(cfg, stats, smoke, device, generator)
+    cloud_loader = make_cloud_val_loader(cfg, stats, smoke, device, len(train_loader.dataset)) if cloud_val else None
     steps_per_epoch = min(len(train_loader), max_batches or len(train_loader))
     epochs = int(cfg["train"]["epochs"])
 
@@ -502,6 +540,8 @@ def run(cfg: dict, *, resume: bool = False, smoke: bool = False, max_batches: in
                 "command": " ".join(sys.argv), "model": model_description(cfg), "arch": cfg["model"]["arch"],
                 "fusion": cfg["model"].get("fusion"), "n_params": count_parameters(model),
                 "augment": augment_description(cfg),
+                "val_iou_cloud50": (f"information only: valid with fixed thick synthetic clouds at "
+                                    f"{VAL_CLOUD_COVERAGE:.0%} coverage (FixedClouds, per-chip seed)"),
                 "in_channels": in_channels(cfg), "modalities": list(mods),
                 "n_train_chips": len(train_loader.dataset), "n_val_chips": len(val_loader.dataset),
                 "steps_per_epoch": steps_per_epoch}
@@ -520,11 +560,17 @@ def run(cfg: dict, *, resume: bool = False, smoke: bool = False, max_batches: in
                                      cfg, max_batches)
         conf, val_loss = validate(model, val_loader, loss_fn, device, amp, cfg, max_batches)
         m = conf.compute()
-        improved = not math.isnan(m["iou"]) and m["iou"] > best_iou
+        if cloud_loader is not None:  # information only: never used for selection
+            iou_cloud50 = validate(model, cloud_loader, loss_fn, device, amp, cfg, max_batches)[0].compute()["iou"]
+        elif cloud_val:  # no S2 input: clouds change nothing
+            iou_cloud50 = m["iou"]
+        else:
+            iou_cloud50 = math.nan
+        improved = not math.isnan(m["iou"]) and m["iou"] > best_iou  # real valid only
         if improved:
             best_iou, best_epoch = m["iou"], epoch
         row = {"epoch": epoch, "lr": lr_now, "train_loss": train_loss, "val_loss": val_loss,
-               "val_iou": m["iou"], "val_f1": m["f1"], "val_precision": m["precision"],
+               "val_iou": m["iou"], "val_iou_cloud50": iou_cloud50, "val_f1": m["f1"], "val_precision": m["precision"],
                "val_recall": m["recall"], "val_accuracy": m["accuracy"], "val_tp": m["tp"],
                "val_fp": m["fp"], "val_fn": m["fn"], "val_tn": m["tn"],
                "best_val_iou": best_iou if best_epoch else math.nan, "epoch_time_s": round(time.time() - t0, 2)}
@@ -544,7 +590,7 @@ def run(cfg: dict, *, resume: bool = False, smoke: bool = False, max_batches: in
             wandb_run.log({k: v for k, v in row.items() if k != "epoch"}, step=epoch)
             wandb_run.summary.update({"best_val_iou": best_iou, "best_epoch": best_epoch})
         log(f"epoch {epoch:3d}/{epochs} | lr {lr_now:.2e} | train loss {train_loss:.4f} | val loss {val_loss:.4f} | "
-            f"val IoU {m['iou']:.4f} | best {best_iou:.4f} (epoch {best_epoch}){' *' if improved else ''} | "
+            f"val IoU {m['iou']:.4f} | cloud50 {iou_cloud50:.4f} | best {best_iou:.4f} (epoch {best_epoch}){' *' if improved else ''} | "
             f"{row['epoch_time_s']:.0f}s")
 
     if wandb_run:

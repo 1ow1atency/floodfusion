@@ -233,7 +233,8 @@ def plot_true_colour_grid(rows: Sequence[tuple[str, Sequence[tuple[str, np.ndarr
 
 
 def plot_training_curves(metrics_csv: str | Path, out_path: str | Path, title: str = "") -> Path:
-    """Train loss and valid water IoU per epoch from a run's metrics.csv; best epoch marked."""
+    """Train loss and valid water IoU per epoch from a run's metrics.csv; best epoch marked.
+    If present, val_iou_cloud50 (fixed synthetic clouds, information only) is a second line."""
     import csv
 
     with open(metrics_csv, newline="") as f:
@@ -249,7 +250,11 @@ def plot_training_curves(metrics_csv: str | Path, out_path: str | Path, title: s
     a1.plot(ep, col("train_loss"), label="train loss", color="#c0612b")
     a1.plot(ep, col("val_loss"), label="valid loss", color="#555555", alpha=0.7)
     a1.set_xlabel("epoch"); a1.set_ylabel("CE + Dice"); a1.legend(); a1.set_title("Loss")
-    a2.plot(ep, iou, color=LABEL_COLOURS[1], label="valid water IoU")
+    a2.plot(ep, iou, color=LABEL_COLOURS[1], label="valid water IoU (selects best.pt)")
+    cloud = col("val_iou_cloud50") if "val_iou_cloud50" in rows[0] else None
+    if cloud is not None and np.isfinite(cloud).any():
+        a2.plot(ep, cloud, color="#888888", linestyle="--",
+                label="valid, synthetic clouds 50% (info only)")
     if np.isfinite(iou).any():
         b = int(np.nanargmax(iou))
         a2.scatter([ep[b]], [iou[b]], color="k", zorder=3, label=f"best {iou[b]:.4f} (epoch {int(ep[b])})")

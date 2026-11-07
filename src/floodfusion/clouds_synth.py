@@ -48,9 +48,13 @@ Not modelled: cloud shadows, and haze outside the cloud mask.
 ``cloudify(s2, coverage, seed)`` is deterministic: the same inputs and seed always give
 the same clouds, so every model can be evaluated on identical cloudy inputs. Training
 draws coverage and seed from torch's RNG (floodfusion.transforms.SyntheticClouds).
+``FixedClouds`` derives the seed from the chip id alone (``chip_seed``), so a chip gets
+the same clouds in every epoch, every run and every model, without touching any RNG.
 """
 
 from __future__ import annotations
+
+import zlib
 
 import numpy as np
 
@@ -194,6 +198,28 @@ def cloudify(s2: np.ndarray, coverage: float, seed: int, thin: bool | None = Non
         spectrum = (THIN_CLOUD_DN if is_thin else THICK_CLOUD_DN) * np.float32(brightness)
         out = apply_clouds(s2, alpha, spectrum, shade)
     return (out, alpha, mask) if return_alpha else out
+
+
+EVAL_CLOUD_SEED = 0  # base seed of the fixed evaluation clouds (independent of the run's seed)
+
+
+def chip_seed(chip_id: str, base: int = EVAL_CLOUD_SEED) -> int:
+    """Stable per-chip seed (CRC32 of base and chip id: the same in every process and Python
+    version, unlike hash())."""
+    return zlib.crc32(f"{base}:{chip_id}".encode())
+
+
+class FixedClouds:
+    """Dataset ``s2_augment`` hook with fixed clouds per chip: ``cloudify(s2, coverage,
+    chip_seed(chip_id))``. Used for the information-only cloudy validation (val_iou_cloud50)."""
+
+    def __init__(self, coverage: float, thin: bool | None = False, base_seed: int = EVAL_CLOUD_SEED):
+        if not 0.0 <= coverage <= 1.0:
+            raise ValueError(f"coverage must be in [0, 1], got {coverage}")
+        self.coverage, self.thin, self.base_seed = float(coverage), thin, int(base_seed)
+
+    def __call__(self, s2: np.ndarray, chip_id: str) -> np.ndarray:
+        return cloudify(s2, self.coverage, chip_seed(chip_id, self.base_seed), thin=self.thin)
 
 
 def _check_s2(s2: np.ndarray) -> None:

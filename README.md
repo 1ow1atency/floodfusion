@@ -17,8 +17,8 @@ Bolivia split of Sen1Floods11, which is used for evaluation only.
 - **Done:** data pipeline, normalisation statistics (train split only) and cloud cover of
   every chip.
 - **Done:** U-Net baselines (SAR-only, optical-only, early fusion), trained.
-- **Done:** FusionNet, trained. It has two encoders (one per modality) with cross-attention
-  fusion. Its results are not recorded in the repo yet.
+- **Done:** FusionNet, trained without cloud or dropout training. It has two encoders (one per
+  modality) with cross-attention fusion.
 - **In progress:** robustness training (synthetic clouds on Sentinel-2, modality dropout).
 - **In progress:** evaluation of water IoU against cloud cover, and on Bolivia.
 
@@ -37,8 +37,11 @@ no repeat over seeds, no synthetic-cloud evaluation, and no robustness-trained m
 | s1_only      |    0.6612 |   0.6567 |      0.6253 |         0.8168 |      0.7702 |
 | s2_only      |    0.8297 |   0.8276 |      0.7908 |         0.9269 |      0.8854 |
 | early_fusion |    0.8379 |   0.8202 |      0.7922 |         0.9339 |      0.8707 |
+| fusion       |    0.8375 |   0.8181 |      0.7971 |         0.9229 |      0.8781 |
 
-On this real, mostly clear data, early fusion does not beat optical-only. The hypothesis
+`fusion` is FusionNet without cloud or dropout training (`best.pt` from epoch 74). On this
+real, mostly clear data it is within single-seed noise of `s2_only` and `early_fusion`, as
+expected without cloud or dropout training. Early fusion does not beat optical-only either. The hypothesis
 still to be tested is that early fusion relies on Sentinel-2 and ignores Sentinel-1, so it
 should fail under clouds.
 

@@ -201,6 +201,7 @@ def test_resume_reproduces_an_uninterrupted_run(synth_cfg, tmp_path, every, epoc
     ra, rb = _rows(a), _rows(b)
     assert [r["epoch"] for r in rb] == [str(e) for e in range(1, epochs + 1)]  # no duplicated epochs
     assert [r["val_iou"] for r in ra] == [r["val_iou"] for r in rb]
+    assert [r["val_iou_cloud50"] for r in ra] == [r["val_iou_cloud50"] for r in rb]  # same fixed clouds
     (resume,) = json.loads((b / "run_info.json").read_text())["resumes"]
     assert resume["from_epoch"] == ckpt_epoch
     assert resume["epochs_retrained"] == list(range(ckpt_epoch + 1, stop_after + 1))
@@ -418,3 +419,76 @@ def test_eval_table_and_training_curves(synth_cfg):
         assert f"{r['metrics']['iou']:6.4f}" in line
     png = plot_training_curves(run_dir / "metrics.csv", run_dir / "training_curves.png")
     assert png.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+    # metrics.csv from before val_iou_cloud50 existed still plots
+    rows = _rows(run_dir)
+    with open(run_dir / "old.csv", "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=[k for k in rows[0] if k != "val_iou_cloud50"], extrasaction="ignore")
+        w.writeheader(); w.writerows(rows)
+    assert plot_training_curves(run_dir / "old.csv", run_dir / "old.png").is_file()
+
+
+# ----------------------------------------------------------------------------- val_iou_cloud50
+
+@pytest.mark.parametrize("variant", ["fusionnet", "unet+aug"])
+def test_cloud_validation_changes_nothing_but_its_own_column(synth_cfg, tmp_path, variant):
+    """val_iou_cloud50 is information only: same weights, best.pt, metrics and RNG with or without it."""
+    arch, _, aug = variant.partition("+")
+    cfg = fusion_cfg(synth_cfg) if arch == "fusionnet" else synth_cfg
+    cfg = robust_cfg(cfg) if aug else cfg
+    cfg = _with(cfg, tmp_path, epochs=3, save_last_every=1)
+    a = run(_with(cfg, tmp_path / "with"), device=CPU, log=quiet)
+    b = run(_with(cfg, tmp_path / "without"), device=CPU, log=quiet, cloud_val=False)
+    for name in ("last.pt", "best.pt"):
+        ca, cb = load_checkpoint(a / name), load_checkpoint(b / name)
+        assert all(torch.equal(ca["model"][k], cb["model"][k]) for k in ca["model"]), name
+        assert (ca["epoch"], ca["best_epoch"], ca["best_val_iou"]) == (cb["epoch"], cb["best_epoch"], cb["best_val_iou"])
+    ra, rb = load_checkpoint(a / "last.pt")["rng"], load_checkpoint(b / "last.pt")["rng"]
+    assert torch.equal(ra["torch"], rb["torch"]) and torch.equal(ra["loader"], rb["loader"])
+    assert ra["python"] == rb["python"] and str(ra["numpy"]) == str(rb["numpy"])
+    rows_a, rows_b = _rows(a), _rows(b)
+    for x, y in zip(rows_a, rows_b):
+        x.pop("epoch_time_s"), y.pop("epoch_time_s")
+        cloud, none = x.pop("val_iou_cloud50"), y.pop("val_iou_cloud50")
+        assert x == y and none == "" and 0.0 <= float(cloud) <= 1.0
+
+
+def test_cloud_validation_loader_is_fixed_and_rng_free(synth_cfg):
+    from floodfusion.training import load_stats, make_cloud_val_loader, make_loaders
+
+    stats = load_stats(synth_cfg)
+    loader = make_cloud_val_loader(synth_cfg, stats, smoke=False, device=CPU)
+    torch.manual_seed(123)
+    before = torch.get_rng_state()
+    first, second = list(loader), list(loader)  # two "epochs"
+    assert torch.equal(torch.get_rng_state(), before)  # global torch RNG untouched
+    for x, y in zip(first, second):
+        assert torch.equal(x["s2"], y["s2"]) and torch.equal(x["s1"], y["s1"])  # identical clouds
+    clean = list(make_loaders(synth_cfg, stats, smoke=False, device=CPU, generator=torch.Generator())[1])
+    for x, y in zip(first, clean):
+        assert x["id"] == y["id"] and torch.equal(x["s1"], y["s1"]) and torch.equal(x["label"], y["label"])
+        assert not torch.equal(x["s2"], y["s2"])  # only S2 is clouded
+    s1_only = copy.deepcopy(synth_cfg)
+    s1_only["data"]["modalities"] = ["s1"]
+    assert make_cloud_val_loader(resolve_config(s1_only), stats, smoke=False, device=CPU) is None
+
+
+def test_s1_only_cloud50_equals_val_iou(synth_cfg, tmp_path):
+    c = copy.deepcopy(synth_cfg)
+    c["data"]["modalities"] = ["s1"]
+    run_dir = run(_with(resolve_config(c), tmp_path), device=CPU, log=quiet)
+    assert all(r["val_iou_cloud50"] == r["val_iou"] for r in _rows(run_dir))  # radar sees through clouds
+
+
+def test_fixed_clouds_depend_only_on_chip_id():
+    import zlib
+
+    import numpy as np
+
+    from floodfusion.clouds_synth import FixedClouds, chip_seed
+
+    assert chip_seed("Ghana_1") == zlib.crc32(b"0:Ghana_1") != chip_seed("Ghana_2")  # stable across processes
+    s2 = np.full((13, 64, 64), 1000.0, dtype=np.float32)
+    f = FixedClouds(0.5)
+    assert np.array_equal(f(s2, "Ghana_1"), FixedClouds(0.5)(s2, "Ghana_1"))
+    assert not np.array_equal(f(s2, "Ghana_1"), f(s2, "Ghana_2"))
+    assert abs((f(s2, "Ghana_1")[1] != 1000.0).mean() - 0.5) < 0.2  # roughly half the chip clouded
