@@ -208,9 +208,11 @@ def plot_cloud_examples(root: str | Path, examples: Sequence[tuple[dict, np.ndar
 
 
 def plot_true_colour_grid(rows: Sequence[tuple[str, Sequence[tuple[str, np.ndarray]]]], out_path: str | Path,
-                          title: str) -> Path:
+                          title: str, scale: float = TRUE_COLOUR_SCALE) -> Path:
     """Grid of raw S2 (13, H, W) true colour images: ``rows`` = [(row label, [(panel title,
-    s2), ...]), ...]. Same display scale as every other true colour figure."""
+    s2), ...]), ...]. One linear stretch (DN / ``scale``) for every panel, so brightness is
+    comparable across panels; the default matches the other true colour figures, a larger
+    ``scale`` (e.g. 6000) keeps bright clouds from saturating."""
     ncols = max(len(panels) for _, panels in rows)
     fig, axes = plt.subplots(len(rows), ncols, figsize=(3.3 * ncols, 3.6 * len(rows)), constrained_layout=True,
                              squeeze=False)
@@ -220,11 +222,12 @@ def plot_true_colour_grid(rows: Sequence[tuple[str, Sequence[tuple[str, np.ndarr
         for c, (panel_title, s2) in enumerate(panels):
             ax = axes[r, c]
             ax.set_axis_on(); ax.set_xticks([]); ax.set_yticks([])
-            ax.imshow(composite(s2, TRUE_COLOUR, TRUE_COLOUR_SCALE), interpolation="nearest")
+            ax.imshow(composite(s2, TRUE_COLOUR, scale), interpolation="nearest")
             ax.set_title(panel_title, fontsize=9)
             if c == 0:
                 ax.set_ylabel(label, fontsize=11)
-    fig.suptitle(f"{title}  |  true colour (B4, B3, B2) / {TRUE_COLOUR_SCALE:.0f}  |  magenta = missing S2", fontsize=12)
+    fig.suptitle(f"{title}  |  true colour (B4, B3, B2) / {scale:.0f}, same stretch in every panel  |  "
+                 f"magenta = missing S2", fontsize=12)
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=90)

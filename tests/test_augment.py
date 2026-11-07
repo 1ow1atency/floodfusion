@@ -261,3 +261,101 @@ def test_true_colour_grid_figure(tmp_path):
             ("real", [("clear", s2)])]
     out = plot_true_colour_grid(rows, tmp_path / "f" / "grid.png", "test")
     assert out.is_file() and out.stat().st_size > 1000
+
+
+# ----------------------------------------------------------------------------- cloud scales and texture
+
+def _n_components(mask: np.ndarray) -> int:
+    """Number of 4-connected True regions (small iterative flood fill, test helper)."""
+    seen = np.zeros_like(mask)
+    h, w = mask.shape
+    count = 0
+    for y0, x0 in zip(*np.nonzero(mask)):
+        if seen[y0, x0]:
+            continue
+        count += 1
+        stack = [(y0, x0)]
+        seen[y0, x0] = True
+        while stack:
+            y, x = stack.pop()
+            for yy, xx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= yy < h and 0 <= xx < w and mask[yy, xx] and not seen[yy, xx]:
+                    seen[yy, xx] = True
+                    stack.append((yy, xx))
+    return count
+
+
+@pytest.mark.parametrize("mode", ["large", "cumulus"])
+def test_thick_modes_hit_coverage_exactly(mode):
+    for coverage in (0.05, 0.3, 0.6, 0.95, 1.0):
+        alpha, mask, _ = cloud_layer(256, 256, coverage, np.random.default_rng(3), mode=mode)
+        assert abs(mask.mean() - coverage) <= 1 / 256 ** 2 + 1e-9
+        assert (alpha[mask] > 0).all()
+
+
+def test_cumulus_mode_is_a_field_of_many_small_cells():
+    n = {m: [_n_components(cloud_layer(256, 256, 0.3, np.random.default_rng(s), mode=m)[1]) for s in range(4)]
+         for m in ("large", "cumulus")}
+    assert min(n["cumulus"]) >= 15  # many broken cells
+    assert np.mean(n["cumulus"]) > 3 * np.mean(n["large"])  # vs a few large clouds
+    # mean cell size: cumulus cells are small
+    sizes = [0.3 * 256 ** 2 / c for c in n["cumulus"]]
+    assert max(sizes) < 0.3 * 256 ** 2 / 15
+
+
+def test_mode_is_drawn_per_seed_and_forcing_it_matches_the_draw():
+    drawn = []
+    for seed in range(16):
+        a = cloud_layer(64, 64, 0.5, np.random.default_rng(seed))[0]
+        matches = [m for m in ("large", "cumulus")
+                   if np.array_equal(a, cloud_layer(64, 64, 0.5, np.random.default_rng(seed), mode=m)[0])]
+        assert len(matches) == 1
+        drawn += matches
+    assert set(drawn) == {"large", "cumulus"}
+    with pytest.raises(ValueError, match="mode"):
+        cloud_layer(64, 64, 0.5, np.random.default_rng(0), mode="stratus")
+
+
+@pytest.mark.parametrize("kind", ["large", "cumulus"])
+def test_thick_texture_stays_in_calibrated_dn_range(kind):
+    from floodfusion.clouds_synth import cloudify_as
+
+    s2 = ground(128, 128)
+    for seed in range(4):
+        out, alpha, mask = cloudify_as(s2, 1.0, seed, kind, return_alpha=True)
+        a = alpha[None]
+        cloud = (out - (1 - a) * s2) / a  # the cloud's own DN per pixel
+        vis = cloud[VIS][:, 1:, 1:]  # skip the nodata pixel
+        lo = THICK_CLOUD_DN[VIS].min() * BRIGHTNESS[0] * (1 - SHADE[False]) - 1
+        hi = THICK_CLOUD_DN[VIS].max() * BRIGHTNESS[1] * (1 + SHADE[False]) + 1
+        assert lo <= vis.min() and vis.max() <= hi  # ~2550-5750 DN, the measured real range
+        assert vis[1].std() / vis[1].mean() > 0.04  # textured, not a flat sheet
+
+
+def test_thick_edges_are_greyer_than_cores():
+    shade_gap, alpha_gap = [], []
+    for seed in range(8):
+        for mode in ("large", "cumulus"):
+            alpha, mask, shade = cloud_layer(256, 256, 0.4, np.random.default_rng(seed), mode=mode)
+            interior = mask.copy()
+            for _ in range(8):  # erode by 8 px: "core" pixels are >= 8 px from the cloud edge
+                interior[1:] &= interior[:-1]; interior[:-1] &= interior[1:]
+                interior[:, 1:] &= interior[:, :-1]; interior[:, :-1] &= interior[:, 1:]
+            edge = mask & ~interior
+            if interior.any() and edge.any():
+                shade_gap.append(shade[interior].mean() - shade[edge].mean())
+                alpha_gap.append(alpha[interior].mean() - alpha[edge].mean())
+    assert len(shade_gap) >= 12
+    assert np.mean(shade_gap) > 0.03  # greyer edges, brighter tops (~0.007 without depth shading)
+    assert min(alpha_gap) > 0  # and thinner edges, in every sample
+
+
+def test_cloudify_as_and_cloudify_agree():
+    from floodfusion.clouds_synth import cloudify_as
+
+    s2 = ground()
+    assert np.array_equal(cloudify_as(s2, 0.5, 7, "thin"), cloudify(s2, 0.5, 7, thin=True), equal_nan=True)
+    thick = cloudify(s2, 0.5, 7, thin=False)
+    assert sum(np.array_equal(thick, cloudify_as(s2, 0.5, 7, k), equal_nan=True) for k in ("large", "cumulus")) == 1
+    with pytest.raises(ValueError, match="kind"):
+        cloudify_as(s2, 0.5, 7, "stratus")
