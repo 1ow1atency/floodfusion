@@ -73,6 +73,7 @@ src/floodfusion/   the package (all logic lives here)
   data.py, chips.py      Sen1Floods11 dataset; missing-value, clipping and normalisation rules
   stats.py               normalisation statistics (train split only)
   clouds.py              real cloud cover per chip (s2cloudless, optional `clouds` extra)
+  cloud_audit.py         audit of the s2cloudless masks: thresholds, labels under cloud
   clouds_synth.py        synthetic clouds for Sentinel-2 (robustness training; opaque variant for evaluation)
   cloud_leakage.py       how much ground signal survives under the synthetic clouds
   transforms.py          crops/flips/rotations, synthetic clouds, modality dropout
@@ -84,7 +85,7 @@ src/floodfusion/   the package (all logic lives here)
 scripts/           thin command-line entry points (train.py, evaluate.py, compute_stats.py, ...)
 configs/           one YAML per experiment, plus band_stats.json (normalisation statistics)
 notebooks/         thin Colab launchers: 00 download data, 01 stats, 02 cloud cover, 03 train,
-                   04 robustness evaluation
+                   04 robustness evaluation, 05 cloud-mask audit (CPU)
 tests/             pytest suite on tiny synthetic GeoTIFFs (never the real dataset)
 docs/              ROADMAP.md, label and cloud-cover tables, figures
 ```
@@ -130,6 +131,11 @@ evaluation (`scripts/robustness_eval.py`) over every run folder and writes `robu
 `summary.md` and figures to `floodfusion/results/` on Drive. It sweeps cloud coverage for
 thick clouds (as trained) and opaque clouds (the stricter test), and also evaluates with S2
 removed. Expect about 15-25 min on a T4. This is final reporting only.
+
+`notebooks/05_cloud_audit.ipynb` (CPU runtime) audits the s2cloudless masks behind the
+real-cloud bins (`scripts/audit_clouds.py`). It writes to `floodfusion/results/cloud_audit/`.
+The local findings are in [docs/cloud_audit.md](docs/cloud_audit.md): threshold 0.4 over-flags
+haze, and the hand labels leave water under cloud unlabelled.
 
 ## Dataset and citation
 

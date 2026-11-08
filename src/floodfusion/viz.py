@@ -441,3 +441,52 @@ def plot_qualitative(rows: Sequence[dict], out_path: str | Path, s1_range: tuple
     fig.savefig(out_path, dpi=110)
     plt.close(fig)
     return out_path
+
+
+# Mask outlines per s2cloudless threshold: colour AND line style differ, so they stay apart in
+# greyscale and for colour-blind readers.
+THRESHOLD_STYLES = {0.4: ("#e34948", "-"), 0.5: ("#eda100", "--"), 0.6: ("#00c2ff", ":")}
+
+
+def plot_cloud_probability(panels: Sequence[dict], out_path: str | Path, title: str, chips_per_row: int = 2,
+                           scale: float = TRUE_COLOUR_SCALE) -> Path:
+    """Per chip three panels: S2 true colour, raw s2cloudless probability (0-1), and true colour
+    with the cloud mask outlined at each threshold. ``panels`` = [{chip_id, split, s2 (raw 13
+    bands), prob (H, W), masks: {threshold: (H, W) bool}, fractions: {threshold: cloud fraction}}]."""
+    n = len(panels)
+    nrows = max(1, -(-n // chips_per_row))
+    fig, axes = plt.subplots(nrows, 3 * chips_per_row, figsize=(3.3 * 3 * chips_per_row, 3.75 * nrows + 0.5),
+                             constrained_layout=True, squeeze=False)
+    for ax in axes.ravel():
+        ax.set_axis_off()
+    im = None
+    for i, pnl in enumerate(panels):
+        r, c0 = divmod(i, chips_per_row)
+        a_rgb, a_prob, a_mask = axes[r, 3 * c0: 3 * c0 + 3]
+        rgb = composite(pnl["s2"], TRUE_COLOUR, scale)
+        for ax in (a_rgb, a_prob, a_mask):
+            ax.set_axis_on(); ax.set_xticks([]); ax.set_yticks([])
+        a_rgb.imshow(rgb, interpolation="nearest")
+        a_rgb.set_title(f"{pnl['chip_id']} ({pnl['split']})", fontsize=9, color=_INK, loc="left")
+        prob = np.ma.masked_where(np.isnan(pnl["s2"]).any(0), pnl["prob"])
+        im = a_prob.imshow(prob, cmap=plt.get_cmap("Blues").with_extremes(bad=NODATA_RGB), vmin=0, vmax=1,
+                           interpolation="nearest")
+        a_prob.set_title("s2cloudless probability", fontsize=9, color=_INK)
+        a_mask.imshow(rgb, interpolation="nearest")
+        for t, mask in sorted(pnl["masks"].items()):
+            colour, ls = THRESHOLD_STYLES.get(t, ("#ffffff", "-"))
+            if mask.any() and not mask.all():
+                a_mask.contour(mask.astype(np.uint8), levels=[0.5], colors=colour, linewidths=1.1, linestyles=ls)
+        a_mask.set_title("mask " + " · ".join(f"{t:g}: {f:.0%}" for t, f in sorted(pnl["fractions"].items())),
+                         fontsize=8.5, color=_INK)
+    handles = [plt.Line2D([], [], color=c, linestyle=ls, linewidth=1.6, label=f"threshold {t:g}")
+               for t, (c, ls) in THRESHOLD_STYLES.items()]
+    fig.legend(handles=handles, loc="outside lower center", ncol=len(handles), frameon=False, fontsize=9)
+    if im is not None:
+        fig.colorbar(im, ax=axes.ravel().tolist(), shrink=0.35, label="cloud probability", location="right")
+    fig.suptitle(f"{title}  |  true colour DN/{scale:g}; magenta = missing S2", fontsize=11, color=_INK)
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=90)
+    plt.close(fig)
+    return out_path

@@ -216,3 +216,16 @@ def test_evaluate_notebook_contract():
     copy_03 = next(c for c in _code_cells("03_train.ipynb") if "LOCAL_DATA = Path(" in c)
     copy_04 = next(c for c in code if "LOCAL_DATA = Path(" in c)
     assert copy_04 == copy_03.replace("RUNS_DIR = Path('/content/drive/MyDrive/floodfusion/runs')\n", "")
+
+
+def test_cloud_audit_notebook_contract():
+    nb = json.loads((REPO / "notebooks" / "05_cloud_audit.ipynb").read_text())
+    code = _code_cells("05_cloud_audit.ipynb")
+    ns: dict = {}
+    exec(code[0], ns)
+    assert ns["OUT_DIR"] == "/content/drive/MyDrive/floodfusion/results/cloud_audit"
+    assert ns["DATA_ROOT"] == "/content/drive/MyDrive/floodfusion/data/sen1floods11"
+    joined = "\n".join(code)
+    assert '[clouds]' in joined and "scripts/audit_clouds.py" in joined
+    assert "--allow-missing" not in joined  # full data: missing files are an error
+    assert "import torch" not in joined and nb["metadata"].get("accelerator") is None  # CPU runtime

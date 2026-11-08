@@ -97,9 +97,18 @@ epoch for information only and never used for selection.
 ## 5. Robustness evaluation
 - [ ] Synthetic cloud augmentation for S2
 - [ ] Modality dropout during training
-- [ ] TODO: Audit s2cloudless masks before using real-cloud bins: several Paraguay train chips are
-  marked 100% cloud but show clear ground or only haze (e.g. Paraguay_215904, Paraguay_36146).
-  Check probability maps, a stricter threshold, and spot-check chips per bin.
+- [ ] Audit s2cloudless masks before using real-cloud bins. Local-sample audit done
+  ([cloud_audit.md](cloud_audit.md)); full-data run still TODO (`notebooks/05_cloud_audit.ipynb`).
+  - **Finding:** threshold 0.4 over-flags haze where the ground is visible. It does not
+    over-flag clear gaps (only a thin dilation rim).
+  - **Recommendation, provisional:** threshold 0.6. It agrees best with the annotators' -1 on
+    train chips (F1 80% vs 72%).
+  - **Labels under cloud:** cloudy pixels are mostly labelled -1, and almost no water is
+    labelled under cloud. The real-cloud bins therefore score the visible part of each chip,
+    not water under cloud.
+  - [ ] Run notebook 05 on the full data. Confirm 0.6 (F1 vs -1 on all train chips;
+    Paraguay_215904 / Paraguay_36146; test and Bolivia bin sizes), then decide whether to
+    regenerate `cloud_cover.csv`.
 - [ ] IoU vs cloud-cover curves for all models: thick (as trained) and opaque clouds, plus S2
   removed (`notebooks/04_evaluate.ipynb`; code ready, not yet run on the trained models)
 - [ ] Evaluation on held-out Bolivia split (evaluation only, never tuned on)
