@@ -269,3 +269,158 @@ def plot_training_curves(metrics_csv: str | Path, out_path: str | Path, title: s
     fig.savefig(out_path, dpi=110)
     plt.close(fig)
     return out_path
+
+
+# ----------------------------------------------------------------------------- robustness figures
+
+# Categorical colour per model family, in a fixed order (validated palette: CVD-safe adjacent pairs).
+# A robust and a non-robust version of one family share the colour; the non-robust one is dashed
+# (lines) or hatched (bars). Aqua and yellow are below 3:1 contrast on white, so every figure also
+# has a legend and summary.md carries the numbers.
+FAMILY_ORDER = ("s1_only", "s2_only", "early_fusion", "fusion")
+CATEGORICAL = ("#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948")
+_INK, _INK_2, _GRID = "#0b0b0b", "#52514e", "#e6e5e1"
+
+
+def model_styles(models: Sequence[tuple[str, str, bool]]) -> dict[str, dict]:
+    """{label: {colour, dashed}} from (label, family, robust). Colour follows the family in the
+    fixed FAMILY_ORDER (other families take the next slots); dashed = non-robust version of a
+    family that also has a robust model in this set."""
+    fams = [f for f in FAMILY_ORDER] + sorted({f for _, f, _ in models} - set(FAMILY_ORDER))
+    robust_fams = {f for _, f, r in models if r}
+    out = {}
+    for label, fam, robust in models:
+        i = fams.index(fam)
+        out[label] = {"colour": CATEGORICAL[i] if i < len(CATEGORICAL) else "#8a8984",
+                      "dashed": (not robust) and fam in robust_fams}
+    return out
+
+
+def _style_axes(ax):
+    ax.grid(True, color=_GRID, linewidth=0.8, linestyle="-")
+    ax.set_axisbelow(True)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color("#b9b8b2")
+    ax.tick_params(colors=_INK_2)
+
+
+def plot_iou_vs_coverage(stats: dict[str, list[tuple[float, float, float]]], styles: dict[str, dict],
+                         out_path: str | Path, title: str) -> Path:
+    """One line per model: mean water IoU over cloud seeds vs synthetic cloud coverage, with a
+    +-1 std band. ``stats`` = {label: [(coverage, mean, std), ...]}."""
+    fig, ax = plt.subplots(figsize=(8.6, 5.0), constrained_layout=True)
+    _style_axes(ax)
+    for label, pts in stats.items():
+        if not pts:
+            continue
+        st = styles[label]
+        x = np.array([p[0] for p in pts]) * 100
+        mu, sd = np.array([p[1] for p in pts]), np.array([p[2] for p in pts])
+        ax.fill_between(x, mu - sd, mu + sd, color=st["colour"], alpha=0.12, linewidth=0)
+        ax.plot(x, mu, color=st["colour"], linewidth=2, linestyle=(0, (5, 3)) if st["dashed"] else "-",
+                solid_capstyle="round", label=label)
+        ax.plot(x, mu, "o", color=st["colour"], markersize=6, markeredgecolor="white", markeredgewidth=1.5)
+    ax.set_xlim(-3, 103); ax.set_ylim(0, 1)
+    ax.set_xticks([0, 20, 40, 60, 80, 100]); ax.set_xticklabels([f"{v}%" for v in (0, 20, 40, 60, 80, 100)])
+    ax.set_xlabel("synthetic cloud coverage of S2 (thick clouds)", color=_INK)
+    ax.set_ylabel("water IoU (pooled), mean ± std over cloud seeds", color=_INK)
+    ax.set_title(title, color=_INK, loc="left")
+    leg = ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), frameon=False, title="model (dashed = no robustness training)",
+                    title_fontsize=8, fontsize=9)
+    for t in leg.get_texts():
+        t.set_color(_INK)
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=130)
+    plt.close(fig)
+    return out_path
+
+
+def plot_real_cloud_bins(rows: Sequence[dict], labels: Sequence[str], styles: dict[str, dict],
+                         splits: Sequence[str], out_path: str | Path, note: str = "") -> Path:
+    """Grouped bars: pooled water IoU per s2cloudless cloud bin and model, one panel per split.
+    Chip counts above each group; bins with too few chips are faded and marked."""
+    from .clouds import CLOUD_BIN_LABELS
+
+    fig, axes = plt.subplots(1, len(splits), figsize=(6.4 * len(splits) + 2.2, 4.8), constrained_layout=True,
+                             squeeze=False)
+    n_models = len(labels)
+    width = min(0.8 / max(n_models, 1), 0.16)
+    for ax, split in zip(axes[0], splits):
+        _style_axes(ax)
+        ax.grid(axis="x", visible=False)
+        for gi, b in enumerate(CLOUD_BIN_LABELS):
+            group = [r for r in rows if r["split"] == split and r["setting"] == "real_clouds" and r["coverage"] == b]
+            n = int(group[0]["n_chips"]) if group else 0
+            unreliable = 0 < n < 10 or any(r["note"].startswith("unreliable") for r in group)
+            for mi, label in enumerate(labels):
+                r = next((r for r in group if r["model"] == label), None)
+                v = float(r["iou"]) if r and r["iou"] else np.nan
+                if np.isnan(v):
+                    continue
+                st = styles[label]
+                x = gi + (mi - (n_models - 1) / 2) * (width + 0.012)
+                ax.bar(x, v, width=width, color=st["colour"], alpha=0.35 if unreliable else 1.0,
+                       hatch="///" if st["dashed"] else None, edgecolor="white", linewidth=0,
+                       label=label if gi == 0 else None)
+            txt = f"n = {n}" + (" (unreliable)" if unreliable else "") if n else "no chips"
+            ax.text(gi, 1.02, txt, ha="center", va="bottom", fontsize=8.5, color=_INK_2 if not unreliable else "#a33b1f")
+        ax.set_xticks(range(len(CLOUD_BIN_LABELS))); ax.set_xticklabels(CLOUD_BIN_LABELS)
+        ax.set_ylim(0, 1.1); ax.set_yticks(np.linspace(0, 1, 6))
+        ax.set_xlabel("real cloud cover of the chip (s2cloudless)", color=_INK)
+        ax.set_ylabel("water IoU (pooled over the bin's chips)", color=_INK)
+        ax.set_title(split, color=_INK, loc="left")
+    handles, labs = axes[0][0].get_legend_handles_labels()
+    leg = fig.legend(handles, labs, loc="center left", bbox_to_anchor=(1.0, 0.5), frameon=False, fontsize=9,
+                     title="model (hatched = no robustness training)", title_fontsize=8)
+    for t in leg.get_texts():
+        t.set_color(_INK)
+    sup = "Real clouds: water IoU per cloud-cover bin. Faded = fewer than 10 chips (unreliable)."
+    fig.suptitle(sup + (f"\n{note}" if note else ""), fontsize=9.5, color=_INK_2)
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    return out_path
+
+
+def plot_qualitative(rows: Sequence[dict], out_path: str | Path, s1_range: tuple[float, float], title: str) -> Path:
+    """One row per chip: S2 true colour at each synthetic cloud coverage, SAR VV, label, then each
+    model's prediction at each coverage. ``rows`` = [{chip_id, optical: [(coverage, raw S2)],
+    s1: raw S1, label, preds: [(model, coverage, (H, W) 0/1)]}]."""
+    keys = sorted(LABEL_COLOURS)
+    lab_cmap = ListedColormap([LABEL_COLOURS[k] for k in keys])
+    lab_norm = BoundaryNorm(np.array(keys + [keys[-1] + 1]) - 0.5, len(keys))
+    ncols = len(rows[0]["optical"]) + 2 + len(rows[0]["preds"])
+    fig, axes = plt.subplots(len(rows), ncols, figsize=(1.9 * ncols, 2.15 * len(rows) + 0.6),
+                             constrained_layout=True, squeeze=False)
+    for r, row in enumerate(rows):
+        ignore = row["label"] == IGNORE_INDEX
+        panels = [(f"S2, cloud {c:.0%}", "rgb", composite(s2, TRUE_COLOUR, TRUE_COLOUR_SCALE)) for c, s2 in row["optical"]]
+        panels.append(("SAR VV", "sar", row["s1"][0]))
+        panels.append(("label", "label", row["label"]))
+        for model, c, p in row["preds"]:
+            shown = np.where(ignore, IGNORE_INDEX, p.astype(np.int64))  # ignored pixels grey (cast first: uint8 wraps -1)
+            panels.append((f"{model}\ncloud {c:.0%}", "label", shown))
+        for c, (head, kind, img) in enumerate(panels):
+            ax = axes[r, c]
+            ax.set_xticks([]); ax.set_yticks([])
+            if kind == "rgb":
+                ax.imshow(img, interpolation="nearest")
+            elif kind == "sar":
+                ax.imshow(np.ma.masked_invalid(img), cmap=plt.get_cmap("gray").with_extremes(bad=NODATA_RGB),
+                          vmin=s1_range[0], vmax=s1_range[1], interpolation="nearest")
+            else:
+                ax.imshow(img, cmap=lab_cmap, norm=lab_norm, interpolation="nearest")
+            if r == 0:
+                ax.set_title(head, fontsize=8, color=_INK)
+            if c == 0:
+                ax.set_ylabel(row["chip_id"], fontsize=8, color=_INK)
+    fig.suptitle(f"{title}  |  blue = water, white = not water, grey = no data (-1)", fontsize=10, color=_INK)
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=110)
+    plt.close(fig)
+    return out_path

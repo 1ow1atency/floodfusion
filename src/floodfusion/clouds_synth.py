@@ -263,16 +263,26 @@ def cloudify_as(s2: np.ndarray, coverage: float, seed: int, kind: str, return_al
     return _cloudify(s2, coverage, seed, thin, THIN_P, None if thin else kind, return_alpha)
 
 
-def _cloudify(s2, coverage, seed, thin, thin_p, mode, return_alpha):
-    _check_s2(s2)
+def cloud_params(h: int, w: int, coverage: float, seed: int, thin: bool | None = None,
+                 thin_p: float = THIN_P, mode: str | None = None):
+    """The cloud that ``cloudify(s2, coverage, seed, thin)`` puts on an (h, w) chip, without the
+    chip: (alpha, mask, shade, spectrum). ``apply_clouds(s2, alpha, spectrum, shade)`` then gives
+    exactly cloudify's output (coverage > 0). Lets callers cache a cloud (~2 MB at 512 px)
+    instead of the clouded 13-band S2 (~14 MB)."""
     rng = np.random.default_rng(seed)
     is_thin = bool(rng.random() < thin_p) if thin is None else bool(thin)
     brightness = rng.uniform(*BRIGHTNESS)
-    alpha, mask, shade = cloud_layer(s2.shape[1], s2.shape[2], coverage, rng, thin=is_thin, mode=mode)
+    alpha, mask, shade = cloud_layer(h, w, coverage, rng, thin=is_thin, mode=mode)
+    spectrum = (THIN_CLOUD_DN if is_thin else THICK_CLOUD_DN) * np.float32(brightness)
+    return alpha, mask, shade, spectrum
+
+
+def _cloudify(s2, coverage, seed, thin, thin_p, mode, return_alpha):
+    _check_s2(s2)
+    alpha, mask, shade, spectrum = cloud_params(s2.shape[1], s2.shape[2], coverage, seed, thin, thin_p, mode)
     if coverage <= 0.0:
         out = s2.astype(np.float32, copy=True)
     else:
-        spectrum = (THIN_CLOUD_DN if is_thin else THICK_CLOUD_DN) * np.float32(brightness)
         out = apply_clouds(s2, alpha, spectrum, shade)
     return (out, alpha, mask) if return_alpha else out
 

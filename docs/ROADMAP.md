@@ -42,12 +42,14 @@ S1 clip limits (1st / 99th percentile of valid train pixels, subsample of 15.1% 
 Seed 0, `best.pt` selected on valid, evaluated on full 512×512 chips. Cloud setting: real S2 as
 acquired (no synthetic clouds). Metric: water-class IoU (label `-1` ignored).
 
-| model        | valid IoU | test IoU | bolivia IoU | test precision | test recall |
-|--------------|----------:|---------:|------------:|---------------:|------------:|
-| s1_only      |    0.6612 |   0.6567 |      0.6253 |         0.8168 |      0.7702 |
-| s2_only      |    0.8297 |   0.8276 |      0.7908 |         0.9269 |      0.8854 |
-| early_fusion |    0.8379 |   0.8202 |      0.7922 |         0.9339 |      0.8707 |
-| fusion       |    0.8375 |   0.8181 |      0.7971 |         0.9229 |      0.8781 |
+| model               | valid IoU | test IoU | bolivia IoU | test precision | test recall |
+|---------------------|----------:|---------:|------------:|---------------:|------------:|
+| s1_only             |    0.6612 |   0.6567 |      0.6253 |         0.8168 |      0.7702 |
+| s2_only             |    0.8297 |   0.8276 |      0.7908 |         0.9269 |      0.8854 |
+| early_fusion        |    0.8379 |   0.8202 |      0.7922 |         0.9339 |      0.8707 |
+| fusion              |    0.8375 |   0.8181 |      0.7971 |         0.9229 |      0.8781 |
+| early_fusion_robust |    0.8271 |   0.8190 |      0.7818 |         0.9132 |      0.8881 |
+| fusion_robust       |    0.8181 |   0.8130 |      0.7916 |         0.9159 |      0.8786 |
 
 Early fusion does not beat optical-only on real (mostly clear) data. Hypothesis to test in
 Stage 5: it relies on S2 and ignores S1, so it should collapse under clouds.
@@ -55,6 +57,12 @@ Stage 5: it relies on S2 and ignores S1, so it should collapse under clouds.
 `fusion` = FusionNet (`configs/fusion.yaml`, cross-attention, no cloud/dropout training),
 `best.pt` from epoch 74. On real (mostly clear) data it is within single-seed noise of
 s2_only and early_fusion, as expected without cloud/dropout training.
+
+Robust runs (`*_robust`: synthetic clouds + modality dropout in training, `best.pt` still
+selected on the real valid split): `early_fusion_robust` from epoch 88, `fusion_robust` from
+epoch 95. With cloud augmentation and modality dropout, early fusion's `val_iou_cloud50`
+(~0.77) is close to FusionNet's (~0.78). Updated Stage 5 hypothesis: **does the architecture
+still matter once both get the same robustness training?**
 
 Model selection rule (all models, including the robust ones): `best.pt` is chosen on the
 real valid split. Valid IoU with fixed synthetic clouds (`val_iou_cloud50`) is logged every

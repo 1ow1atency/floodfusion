@@ -19,31 +19,39 @@ Bolivia split of Sen1Floods11, which is used for evaluation only.
 - **Done:** U-Net baselines (SAR-only, optical-only, early fusion), trained.
 - **Done:** FusionNet, trained without cloud or dropout training. It has two encoders (one per
   modality) with cross-attention fusion.
-- **In progress:** robustness training (synthetic clouds on Sentinel-2, modality dropout).
-- **In progress:** evaluation of water IoU against cloud cover, and on Bolivia.
+- **Done:** robustness training (synthetic clouds on Sentinel-2, modality dropout) for early
+  fusion and FusionNet.
+- **In progress:** robustness evaluation on test and Bolivia (synthetic cloud cover,
+  missing modality, real-cloud bins); code ready (`notebooks/04_evaluate.ipynb`), not yet run.
 
 ## Preliminary results
 
 **Preliminary: single seed (0), real data only.** These numbers are not final: there is
-no repeat over seeds, no synthetic-cloud evaluation, and no robustness-trained models yet.
+no repeat over seeds and no synthetic-cloud or missing-modality evaluation yet.
 
 - `best.pt` was selected on the valid split and evaluated on full 512×512 chips.
 - Sentinel-2 is used as acquired, with no synthetic clouds.
 - Metric: IoU of the water class, with no-data pixels (label `-1`) ignored.
 - Source: [docs/ROADMAP.md](docs/ROADMAP.md).
 
-| model        | valid IoU | test IoU | bolivia IoU | test precision | test recall |
-|--------------|----------:|---------:|------------:|---------------:|------------:|
-| s1_only      |    0.6612 |   0.6567 |      0.6253 |         0.8168 |      0.7702 |
-| s2_only      |    0.8297 |   0.8276 |      0.7908 |         0.9269 |      0.8854 |
-| early_fusion |    0.8379 |   0.8202 |      0.7922 |         0.9339 |      0.8707 |
-| fusion       |    0.8375 |   0.8181 |      0.7971 |         0.9229 |      0.8781 |
+| model               | valid IoU | test IoU | bolivia IoU | test precision | test recall |
+|---------------------|----------:|---------:|------------:|---------------:|------------:|
+| s1_only             |    0.6612 |   0.6567 |      0.6253 |         0.8168 |      0.7702 |
+| s2_only             |    0.8297 |   0.8276 |      0.7908 |         0.9269 |      0.8854 |
+| early_fusion        |    0.8379 |   0.8202 |      0.7922 |         0.9339 |      0.8707 |
+| fusion              |    0.8375 |   0.8181 |      0.7971 |         0.9229 |      0.8781 |
+| early_fusion_robust |    0.8271 |   0.8190 |      0.7818 |         0.9132 |      0.8881 |
+| fusion_robust       |    0.8181 |   0.8130 |      0.7916 |         0.9159 |      0.8786 |
 
 `fusion` is FusionNet without cloud or dropout training (`best.pt` from epoch 74). On this
 real, mostly clear data it is within single-seed noise of `s2_only` and `early_fusion`, as
-expected without cloud or dropout training. Early fusion does not beat optical-only either. The hypothesis
-still to be tested is that early fusion relies on Sentinel-2 and ignores Sentinel-1, so it
-should fail under clouds.
+expected without cloud or dropout training. Early fusion does not beat optical-only either.
+
+The `*_robust` runs were trained with synthetic clouds and modality dropout (`best.pt` still
+selected on the real valid split; epochs 88 and 95). With that training, early fusion's valid
+IoU under fixed synthetic clouds (`val_iou_cloud50`, about 0.77) is close to FusionNet's
+(about 0.78). The question for the robustness evaluation is therefore: **does the architecture
+still matter once both models get the same robustness training?**
 
 ## Repository layout
 
@@ -57,10 +65,12 @@ src/floodfusion/   the package (all logic lives here)
   models.py              U-Net baselines and FusionNet
   losses.py, metrics.py  cross-entropy + Dice loss; water IoU from pooled confusion counts
   training.py, evaluation.py   training loop (checkpoints, resume, W&B) and evaluation
+  robustness.py          robustness evaluation: synthetic clouds, missing modality, real-cloud bins
   viz.py                 figures
 scripts/           thin command-line entry points (train.py, evaluate.py, compute_stats.py, ...)
 configs/           one YAML per experiment, plus band_stats.json (normalisation statistics)
-notebooks/         thin Colab launchers: 00 download data, 01 stats, 02 cloud cover, 03 train
+notebooks/         thin Colab launchers: 00 download data, 01 stats, 02 cloud cover, 03 train,
+                   04 robustness evaluation
 tests/             pytest suite on tiny synthetic GeoTIFFs (never the real dataset)
 docs/              ROADMAP.md, label and cloud-cover tables, figures
 ```
@@ -100,6 +110,10 @@ Training runs on a Colab GPU (T4) with `notebooks/03_train.ipynb`.
    automatically after a disconnect, and evaluates `best.pt` on valid, test and bolivia.
 
 Never change hyperparameters based on test or bolivia results.
+
+After all runs are trained and evaluated, `notebooks/04_evaluate.ipynb` runs the robustness
+evaluation (`scripts/robustness_eval.py`) over every run folder and writes `robustness.csv`,
+`summary.md` and figures to `floodfusion/results/` on Drive. This is final reporting only.
 
 ## Dataset and citation
 

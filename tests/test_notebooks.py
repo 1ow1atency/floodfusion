@@ -197,3 +197,22 @@ def test_train_notebook_contract():
     assert "clouds" not in joined and "s2cloudless" not in joined
     assert '--resume' in joined and '--no-wandb' in joined and "/content/data/sen1floods11" in joined
     assert all(s in joined for s in ("'valid'", "'test'", "'bolivia'"))
+
+
+def test_evaluate_notebook_contract():
+    nb = json.loads((REPO / "notebooks" / "04_evaluate.ipynb").read_text())
+    top = "".join(nb["cells"][0]["source"])
+    assert "Final reporting only" in top and "select models" in top
+    code = _code_cells("04_evaluate.ipynb")
+    ns: dict = {}
+    exec(code[0], ns)
+    assert set(k for k in ns if not k.startswith("__")) == {"RUNS_DIR", "RESULTS_DIR", "CACHE_DIR"}
+    assert ns["RUNS_DIR"] == "/content/drive/MyDrive/floodfusion/runs"
+    assert ns["RESULTS_DIR"] == "/content/drive/MyDrive/floodfusion/results"
+    assert ns["CACHE_DIR"].startswith("/content/") and "drive" not in ns["CACHE_DIR"]  # local disk, not Drive quota
+    joined = "\n".join(code)
+    assert "scripts/robustness_eval.py" in joined and "/content/data/sen1floods11" in joined
+    assert ".[clouds]" not in joined and "s2cloudless" not in joined  # base install only
+    copy_03 = next(c for c in _code_cells("03_train.ipynb") if "LOCAL_DATA = Path(" in c)
+    copy_04 = next(c for c in code if "LOCAL_DATA = Path(" in c)
+    assert copy_04 == copy_03.replace("RUNS_DIR = Path('/content/drive/MyDrive/floodfusion/runs')\n", "")
