@@ -404,9 +404,9 @@ def plot_real_cloud_bins(rows: Sequence[dict], labels: Sequence[str], styles: di
 
 
 def plot_qualitative(rows: Sequence[dict], out_path: str | Path, s1_range: tuple[float, float], title: str) -> Path:
-    """One row per chip: S2 true colour at each synthetic cloud coverage, SAR VV, label, then each
-    model's prediction at each coverage. ``rows`` = [{chip_id, optical: [(coverage, raw S2)],
-    s1: raw S1, label, preds: [(model, coverage, (H, W) 0/1)]}]."""
+    """One row per chip: S2 true colour per cloud setting, SAR VV, label, then each model's
+    prediction per setting. ``rows`` = [{chip_id, optical: [(column title, raw S2)], s1: raw S1,
+    label, preds: [(model, setting name, (H, W) 0/1)]}]."""
     keys = sorted(LABEL_COLOURS)
     lab_cmap = ListedColormap([LABEL_COLOURS[k] for k in keys])
     lab_norm = BoundaryNorm(np.array(keys + [keys[-1] + 1]) - 0.5, len(keys))
@@ -415,12 +415,12 @@ def plot_qualitative(rows: Sequence[dict], out_path: str | Path, s1_range: tuple
                              constrained_layout=True, squeeze=False)
     for r, row in enumerate(rows):
         ignore = row["label"] == IGNORE_INDEX
-        panels = [(f"S2, cloud {c:.0%}", "rgb", composite(s2, TRUE_COLOUR, TRUE_COLOUR_SCALE)) for c, s2 in row["optical"]]
+        panels = [(head, "rgb", composite(s2, TRUE_COLOUR, TRUE_COLOUR_SCALE)) for head, s2 in row["optical"]]
         panels.append(("SAR VV", "sar", row["s1"][0]))
         panels.append(("label", "label", row["label"]))
-        for model, c, p in row["preds"]:
+        for model, setting, p in row["preds"]:
             shown = np.where(ignore, IGNORE_INDEX, p.astype(np.int64))  # ignored pixels grey (cast first: uint8 wraps -1)
-            panels.append((f"{model}\ncloud {c:.0%}", "label", shown))
+            panels.append((f"{model}\n{setting}", "label", shown))
         for c, (head, kind, img) in enumerate(panels):
             ax = axes[r, c]
             ax.set_xticks([]); ax.set_yticks([])

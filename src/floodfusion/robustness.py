@@ -59,8 +59,10 @@ CLOUD_SETTINGS = ("thick_clouds", "opaque_clouds")
 COVERAGES = (0.0, 0.2, 0.4, 0.6, 0.8, 1.0)
 CLOUD_SEEDS = (0, 1, 2)
 MIN_BIN_CHIPS = 10  # real-cloud bins with fewer chips are flagged unreliable
-QUAL_MODELS = ("s2_only", "early_fusion", "early_fusion_robust", "fusion_robust")
-QUAL_COVERAGES = (0.6, 1.0)  # prediction columns of the qualitative figure (cloud seed 0)
+# Qualitative figure (cloud seed 0): S2 clear / thick 100% / opaque 100%, SAR, label, then each
+# robust model's prediction under thick and under opaque cloud, side by side (shows the leak).
+QUAL_MODELS = ("s2_only_robust", "early_fusion_robust", "fusion_robust")
+QUAL_SETTINGS = (("thick_clouds", 1.0), ("opaque_clouds", 1.0))
 QUAL_CHIPS = 4
 CSV_COLUMNS = ("model", "split", "setting", "coverage", "cloud_seed", "iou", "precision", "recall",
                "n_chips", "note")
@@ -227,8 +229,8 @@ def evaluate_split(models: Sequence[EvalModel], split: str, root: str | Path, *,
                    qual_ids: Iterable[str] = (), log=print) -> tuple[dict, dict, int]:
     """Run every applicable (setting, model) on one split.
 
-    Returns ({(label, setting, coverage, cloud_seed): WaterConfusion}, {(label, coverage): {chip:
-    predicted labels}} for ``qual_ids`` at QUAL_COVERAGES with cloud seed 0, n_chips)."""
+    Returns ({(label, setting, coverage, cloud_seed): WaterConfusion}, {(label, setting, coverage):
+    {chip: predicted labels}} for ``qual_ids`` and QUAL_MODELS in QUAL_SETTINGS with cloud seed 0, n_chips)."""
     mods = tuple(m for m in ("s1", "s2") if any(m in em.mods for em in models))
     ref = models[0]
     qual_ids = set(qual_ids)
@@ -244,7 +246,7 @@ def evaluate_split(models: Sequence[EvalModel], split: str, root: str | Path, *,
         n_chips = len(ds)
         loader = DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
         cur = {m.label: WaterConfusion() for m in active}
-        keep = setting == "thick_clouds" and seed == CLOUD_SEEDS[0] and cov in QUAL_COVERAGES
+        keep = (setting, cov) in QUAL_SETTINGS and seed == CLOUD_SEEDS[0]
         with torch.no_grad():
             for batch in loader:
                 if setting == "s2_removed":
@@ -257,11 +259,11 @@ def evaluate_split(models: Sequence[EvalModel], split: str, root: str | Path, *,
                     with _autocast(device, amp):
                         logits = forward_model(m.model, batch, m.cfg, device)
                     cur[m.label].update(logits.float(), y, list(batch["id"]))
-                    if keep and qual_ids:
+                    if keep and qual_ids and m.label in QUAL_MODELS:
                         lab = logits.argmax(1).cpu().numpy().astype(np.uint8)
                         for i, cid in enumerate(batch["id"]):
                             if cid in qual_ids:
-                                preds.setdefault((m.label, cov), {})[cid] = lab[i]
+                                preds.setdefault((m.label, setting, cov), {})[cid] = lab[i]
         for label, conf in cur.items():
             confs[(label, setting, cov, seed)] = conf
         what = setting if setting not in CLOUD_SETTINGS else f"{setting.split('_')[0]} clouds {cov:.0%} seed {seed}"
@@ -625,14 +627,21 @@ def _qualitative(models, root, split, chip_ids, preds, cache: CloudCache, out_pa
     from . import viz
 
     by_label = {m.label: m for m in models}
-    shown = [lab for lab in QUAL_MODELS if lab in by_label and all((lab, c) in preds for c in QUAL_COVERAGES)]
+    shown = [lab for lab in QUAL_MODELS if lab in by_label and all((lab, *k) in preds for k in QUAL_SETTINGS)]
+
+    def name(setting, cov):
+        return f"{setting.split('_')[0]} {cov:.0%}"
+
     rows = []
     for cid in chip_ids:
         s2 = load_raw(root, cid, "s2")
-        rows.append({"chip_id": cid,
-                     "optical": [(c, cache.apply(s2, cid, c, CLOUD_SEEDS[0])) for c in (0.0, *QUAL_COVERAGES)],
-                     "s1": load_raw(root, cid, "s1"), "label": load_label(root, cid),
-                     "preds": [(lab, c, preds[(lab, c)][cid]) for lab in shown for c in QUAL_COVERAGES]})
+        optical = [("S2 clear", s2)] + [(f"S2 {name(st, c)}", cache.apply(s2, cid, c, CLOUD_SEEDS[0],
+                                                                          opaque=st == "opaque_clouds"))
+                                        for st, c in QUAL_SETTINGS]
+        rows.append({"chip_id": cid, "optical": optical, "s1": load_raw(root, cid, "s1"),
+                     "label": load_label(root, cid),
+                     "preds": [(lab, name(st, c), preds[(lab, st, c)][cid]) for lab in shown for st, c in QUAL_SETTINGS]})
     stats = models[0].stats
     return viz.plot_qualitative(rows, out_path, s1_range=(stats["s1"]["clip_min"][0], stats["s1"]["clip_max"][0]),
-                                title=f"{split}: thick synthetic clouds, as trained (seed {CLOUD_SEEDS[0]}), and predictions")
+                                title=f"{split}: synthetic clouds (seed {CLOUD_SEEDS[0]}): thick = as trained, "
+                                      "opaque = no ground signal; predictions of the robust models")

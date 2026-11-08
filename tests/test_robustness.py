@@ -369,6 +369,47 @@ def test_qualitative_chip_rule(runs):
     assert rb.pick_qual_chips(runs["root"], "test", rows, ids, n=4) == picked
 
 
+def test_qualitative_figure_shows_thick_vs_opaque(runs, synth_cfg, monkeypatch):
+    import floodfusion.viz as viz
+    from floodfusion.chips import load_raw
+    from floodfusion.training import forward_model
+
+    out = runs["tmp"] / "runs_eval"
+    dirs = [*runs["dirs"].values(), _dummy_run(synth_cfg, out, "s2_only_robust", ["s2"], robust=True),
+            _dummy_run(synth_cfg, out, "early_fusion_robust", ["s1", "s2"], robust=True)]
+    seen, real = {}, viz.plot_qualitative
+
+    def spy(rows, out_path, **kw):
+        seen["rows"] = rows
+        return real(rows, out_path, **kw)
+
+    monkeypatch.setattr(viz, "plot_qualitative", spy)
+    res = rb.run_robustness(dirs, runs["root"], runs["tmp"] / "q", cloud_csv=runs["cloud_csv"], splits=["test"],
+                            device=CPU, log=quiet)
+    assert res["written"]["qualitative"].is_file()
+    (row,) = seen["rows"]  # one test chip has a cloud fraction
+    cid = row["chip_id"]
+    assert [t for t, _ in row["optical"]] == ["S2 clear", "S2 thick 100%", "S2 opaque 100%"]
+    assert [(m, t) for m, t, _ in row["preds"]] == [(m, t) for m in rb.QUAL_MODELS
+                                                    for t in ("thick 100%", "opaque 100%")]  # robust models only
+    s2 = load_raw(runs["root"], cid, "s2")
+    cache = rb.CloudCache()
+    assert np.array_equal(row["optical"][0][1], s2, equal_nan=True)
+    assert np.array_equal(row["optical"][1][1], cache.apply(s2, cid, 1.0, 0), equal_nan=True)
+    assert np.array_equal(row["optical"][2][1], cache.apply(s2, cid, 1.0, 0, opaque=True), equal_nan=True)
+    # each prediction is the model's output on that very input
+    by_label = {m.label: m for m in res["models"]}
+    for (model, title, pred) in row["preds"]:
+        m = by_label[model]
+        hook = rb.CloudHook(1.0, 0, rb.CloudCache(), opaque=title.startswith("opaque"))
+        ds = Sen1Floods11(runs["root"], "test", modalities=("s1", "s2"), s2_bands=m.cfg["data"].get("s2_bands"),
+                          stats=m.stats, s2_augment=hook)
+        batch = next(b for b in torch.utils.data.DataLoader(ds, batch_size=1) if b["id"][0] == cid)
+        with torch.no_grad():
+            want = forward_model(m.model, batch, m.cfg, CPU).argmax(1)[0].numpy()
+        assert np.array_equal(pred, want), (model, title)
+
+
 def test_refuses_smoke_checkpoints_and_other_splits(runs):
     d = runs["dirs"]["s1_only"]
     ck = torch.load(d / "best.pt", weights_only=False)
