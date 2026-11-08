@@ -89,21 +89,29 @@ def test_full_evaluation_outputs_and_markings(runs):
                 and r["coverage"] == cov and r["cloud_seed"] == str(seed)]
 
     for split in rb.SPLITS:
-        clean = get("s1_only", split, "synthetic_clouds", "0.0")[0]
-        for cov in ("0.2", "1.0"):
-            for seed in rb.CLOUD_SEEDS:  # s1_only is unaffected by clouds: its clean result, marked
-                (r,) = get("s1_only", split, "synthetic_clouds", cov, seed)
-                assert r["iou"] == clean["iou"] and r["note"] == rb.NOTE_NO_S2
+        clean = get("s1_only", split, "thick_clouds", "0.0")[0]
+        for setting in rb.CLOUD_SETTINGS:
+            for cov in ("0.2", "1.0"):
+                for seed in rb.CLOUD_SEEDS:  # s1_only is unaffected by clouds: its clean result, marked
+                    (r,) = get("s1_only", split, setting, cov, seed)
+                    assert r["iou"] == clean["iou"] and r["note"] == rb.NOTE_NO_S2
+        for m in ("s2_only", "early_fusion", "fusion_robust"):  # opaque at 0%: evaluated, equal to clean
+            (z,) = get(m, split, "opaque_clouds", "0.0", rb.CLOUD_SEEDS[0])
+            (c,) = get(m, split, "thick_clouds", "0.0")
+            assert z["note"] == rb.NOTE_ZERO_OPAQUE and (z["iou"], z["precision"], z["recall"]) == (
+                c["iou"], c["precision"], c["recall"])
         assert get("s2_only", split, "s2_removed")[0]["note"] == rb.NOTE_NA_S2 and get("s2_only", split, "s2_removed")[0]["iou"] == ""
         assert get("s1_only", split, "s1_removed")[0]["note"] == rb.NOTE_NA_S1
         assert get("s1_only", split, "s2_removed")[0]["note"] == rb.NOTE_NO_S2
         assert get("s2_only", split, "s1_removed")[0]["note"] == rb.NOTE_NO_S1
         for m in ("early_fusion", "fusion_robust"):
             assert get(m, split, "s2_removed")[0]["note"] == "" and get(m, split, "s1_removed")[0]["note"] == ""
-        n_synth = len([r for r in rows if r["split"] == split and r["setting"] == "synthetic_clouds"])
-        assert n_synth == 4 * (1 + 5 * len(rb.CLOUD_SEEDS))
+        for setting in rb.CLOUD_SETTINGS:
+            n_synth = len([r for r in rows if r["split"] == split and r["setting"] == setting])
+            assert n_synth == 4 * (1 + 5 * len(rb.CLOUD_SEEDS))
     md = (out / "summary.md").read_text()
     assert "Final reporting only" in md and "audit" in md and "n/a" in md and "†" in md and "⚠" in md
+    assert "Opaque synthetic clouds (stricter test)" in md and "semi-transparent" in md and "opaque 100%" in md
 
 
 def test_cloud_cache_gives_identical_results(runs):
@@ -111,10 +119,12 @@ def test_cloud_cache_gives_identical_results(runs):
     first = _run(runs, runs["tmp"] / "a", cache_dir=cache, figures=False)
     second = _run(runs, runs["tmp"] / "b", cache_dir=cache, figures=False)
     nocache = _run(runs, runs["tmp"] / "c", figures=False)
-    n_clouds = 5 * len(rb.CLOUD_SEEDS) * (2 + 1)  # coverages x seeds x (2 test + 1 bolivia chips)
+    # (coverages x seeds + the empty opaque cloud at 0%) x (2 test + 1 bolivia chips); thick and
+    # opaque share each layer
+    n_clouds = (5 * len(rb.CLOUD_SEEDS) + 1) * (2 + 1)
     assert first["clouds_generated"] == n_clouds and len(list(cache.glob("*.npz"))) == n_clouds
     assert second["clouds_generated"] == 0  # every cloud came from the cache
-    assert nocache["clouds_generated"] == n_clouds  # each cloud generated once, even without a cache
+    assert nocache["clouds_generated"] == n_clouds  # each cloud generated once, even without a cache dir
     assert first["rows"] == second["rows"] == nocache["rows"]
 
 
@@ -128,6 +138,8 @@ def test_cache_layer_rebuilds_cloudify_exactly(synth_root, tmp_path):
         want = cloudify(s2, 0.6, rb.eval_cloud_seed(cid, 0.6, 1), thin=False)
         assert np.array_equal(got, want, equal_nan=True)
     assert cache.apply(s2, cid, 0.0, 1) is s2  # coverage 0: untouched
+    z = cache.apply(s2, cid, 0.0, 1, opaque=True)  # opaque path at 0%: blended, but must equal the input
+    assert z is not s2 and np.array_equal(z, s2, equal_nan=True)
     seeds = {rb.eval_cloud_seed(c, cov, s) for c in ("A", "B") for cov in (0.2, 0.4) for s in (0, 1)}
     assert len(seeds) == 8  # distinct per chip, coverage and cloud seed
 
@@ -169,7 +181,7 @@ def test_identical_clouds_for_every_model(runs, monkeypatch):
 
 
 def test_missing_modality_inputs_per_model_type(runs, monkeypatch):
-    assert rb.status(("s1",), "synthetic_clouds") == rb.NOTE_NO_S2
+    assert rb.status(("s1",), "thick_clouds") == rb.status(("s1",), "opaque_clouds") == rb.NOTE_NO_S2
     assert rb.status(("s2",), "s2_removed") == rb.NOTE_NA_S2 and rb.status(("s2",), "s1_removed") == rb.NOTE_NO_S1
     assert rb.status(("s1",), "s1_removed") == rb.NOTE_NA_S1 and rb.status(("s1",), "s2_removed") == rb.NOTE_NO_S2
     assert rb.status(("s1", "s2"), "s2_removed") == rb.status(("s1", "s2"), "s1_removed") == "eval"
@@ -184,6 +196,126 @@ def test_missing_modality_inputs_per_model_type(runs, monkeypatch):
         assert c["mask"][:, gone].eq(False).all() and c["mask"][:, 1 - gone].all()
         x = c["x"]  # early fusion input: S1 channels 0-1, S2 channels 2-14, after normalisation
         assert not (x[:, 2:] if gone else x[:, :2]).any() and (x[:, :2] if gone else x[:, 2:]).any()
+
+
+# ----------------------------------------------------------------------------- opaque clouds
+
+def _ground(seed, h=64, w=64):
+    """Raw S2 DN (13, h, w) with a water strip (dark NIR/SWIR) and land, plus one nodata pixel."""
+    rng = np.random.default_rng(seed)
+    s2 = rng.uniform(500, 3000, (13, h, w)).astype(np.float32)
+    label = np.zeros((h, w), np.int64)
+    label[:, : w // 3] = 1
+    from floodfusion.chips import S2_BANDS
+    for b, (water, land) in {"B3": (900, 800), "B8": (300, 2800), "B11": (150, 2200)}.items():
+        s2[S2_BANDS.index(b)] = np.where(label == 1, water, land) * rng.uniform(0.9, 1.1, (h, w))
+    s2[:, 5, 5] = np.nan
+    return s2, label
+
+
+@pytest.mark.parametrize("coverage", [0.3, 0.6, 1.0])
+def test_opaque_cloud_same_mask_and_no_ground_signal(coverage):
+    from floodfusion.clouds_synth import apply_clouds, cloud_params, opaque_alpha
+
+    s2_a, _ = _ground(1)
+    s2_b, _ = _ground(2)  # a different ground under the same cloud
+    for seed in range(4):  # large and cumulus clouds
+        alpha, mask, shade, spectrum = cloud_params(64, 64, coverage, seed, thin=False)
+        op = opaque_alpha(alpha, mask)
+        assert mask.mean() == pytest.approx(coverage, abs=1 / mask.size)
+        assert (op[mask] == 1.0).all() and np.array_equal(op[~mask], alpha[~mask])  # same mask, same fringe
+        assert (alpha[mask] < 1.0).any()  # the thick cloud it came from is not opaque
+        a, b = apply_clouds(s2_a, op, spectrum, shade), apply_clouds(s2_b, op, spectrum, shade)
+        inside = mask & np.isfinite(s2_a).all(0)
+        assert np.array_equal(a[:, inside], b[:, inside])  # nothing of the ground survives inside the mask
+        assert np.array_equal(a[:, inside], (spectrum[:, None] * shade[inside][None]).astype(np.float32))
+        assert np.isnan(a[:, 5, 5]).all()  # nodata stays nodata
+        thick = apply_clouds(s2_a, alpha, spectrum, shade)
+        assert np.array_equal(a[:, ~mask], thick[:, ~mask], equal_nan=True)  # outside the mask: as thick
+    alpha0, mask0, _, _ = cloud_params(64, 64, 0.0, 0, thin=False)
+    assert not mask0.any() and not opaque_alpha(alpha0, mask0).any()  # coverage 0: nothing to replace
+
+
+def test_cache_opaque_shares_the_thick_layer(synth_root, tmp_path):
+    from floodfusion.chips import load_raw
+    from floodfusion.clouds_synth import cloud_params
+
+    cid = Sen1Floods11(synth_root, "test", modalities=("s1",)).ids[0]
+    s2 = load_raw(synth_root, cid, "s2")
+    h, w = s2.shape[1:]
+    cache = rb.CloudCache(tmp_path / "c")
+    thick, opaque = cache.apply(s2, cid, 0.6, 2), cache.apply(s2, cid, 0.6, 2, opaque=True)
+    assert cache.generated == 1 and len(list((tmp_path / "c").glob("*.npz"))) == 1  # one layer for both
+    _, mask, shade, spectrum = cloud_params(h, w, 0.6, rb.eval_cloud_seed(cid, 0.6, 2), thin=False)
+    inside = mask & np.isfinite(s2).all(0)
+    assert np.array_equal(opaque[:, inside], (spectrum[:, None] * shade[inside][None]).astype(np.float32))
+    assert np.array_equal(opaque[:, ~mask], thick[:, ~mask], equal_nan=True)
+    # a cache file from before the opaque setting (no mask) is regenerated, not misread
+    (f,) = (tmp_path / "c").glob("*.npz")
+    with np.load(f) as z:
+        np.savez(f, alpha=z["alpha"], shade=z["shade"], spectrum=z["spectrum"])
+    again = rb.CloudCache(tmp_path / "c")
+    assert np.array_equal(again.apply(s2, cid, 0.6, 2, opaque=True), opaque, equal_nan=True) and again.generated == 1
+
+
+def test_opaque_zero_sanity_check_fails_loudly(runs, monkeypatch):
+    # a broken opaque path that clouds the whole chip even where the mask is empty
+    monkeypatch.setattr(rb, "opaque_alpha", lambda alpha, mask: np.ones_like(alpha))
+    with pytest.raises(RuntimeError, match=r"(?s)SANITY CHECK FAILED.*opaque clouds at coverage 0.*s2_only"):
+        _run(runs, runs["tmp"] / "o", figures=False)
+
+
+def test_opaque_drop_warning():
+    def row(model, setting, cov, iou, seed="", note=""):
+        return {"model": model, "split": "test", "setting": setting, "coverage": cov, "cloud_seed": seed,
+                "iou": iou, "precision": "0.5", "recall": "0.5", "n_chips": 2, "note": note}
+
+    def em(label, mods):
+        return rb.EvalModel(label=label, run_dir=Path(label), cfg={}, stats={}, mods=mods, family=label,
+                            robust=False, epoch=1, smoke=False)
+
+    def rows(opaque_iou):
+        out = []
+        for m in ("s2_only", "early_fusion"):
+            out.append(row(m, "thick_clouds", "0.0", "0.8"))
+            out += [row(m, s, "1.0", v, seed=k) for s, v in (("thick_clouds", "0.7"), ("opaque_clouds", opaque_iou))
+                    for k in rb.CLOUD_SEEDS]
+            out.append(row(m, "s2_removed", "", "" if m == "s2_only" else "0.6",
+                           note=rb.NOTE_NA_S2 if m == "s2_only" else ""))
+        return out
+
+    models = [em("s2_only", ("s2",)), em("early_fusion", ("s1", "s2"))]
+    lines, warnings = rb.opaque_drop(models, rows("0.05"), "test")
+    assert not warnings and len(lines) == 2 and "S2 removed n/a" in lines[0] and "S2 removed 0.6000" in lines[1]
+    _, warnings = rb.opaque_drop(models, rows("0.7"), "test")  # s2_only still sees water: flagged
+    assert len(warnings) == 1 and "s2_only" in warnings[0] and "WARNING" in warnings[0]
+
+
+def test_leakage_measure_separates_thick_from_opaque():
+    from floodfusion.cloud_leakage import chip_leakage, masked_box_mean, roc_auc
+    from floodfusion.clouds_synth import apply_clouds, cloud_params, opaque_alpha
+
+    rng = np.random.default_rng(0)
+    pos, neg = rng.integers(0, 5, 40).astype(float), rng.integers(2, 7, 30).astype(float)  # with ties
+    brute = np.mean([(p > n) + 0.5 * (p == n) for p in pos for n in neg])
+    assert roc_auc(pos, neg) == pytest.approx(brute) and roc_auc(pos, pos) == pytest.approx(0.5)
+    x = rng.normal(size=(7, 9))
+    valid = rng.random((7, 9)) > 0.3
+    got = masked_box_mean(x, valid, 3)
+    i, j = 3, 4
+    win, vw = x[i - 1:i + 2, j - 1:j + 2], valid[i - 1:i + 2, j - 1:j + 2]
+    assert np.isnan(got[~valid]).all() and (not valid[i, j] or got[i, j] == pytest.approx(win[vw].mean()))
+
+    s2, label = _ground(3)
+    alpha, mask, shade, spectrum = cloud_params(64, 64, 1.0, 0, thin=False)
+    thick = chip_leakage(s2, label, apply_clouds(s2, alpha, spectrum, shade), alpha, mask, min_pixels=50)
+    op_alpha = opaque_alpha(alpha, mask)
+    opaque = chip_leakage(s2, label, apply_clouds(s2, op_alpha, spectrum, shade), op_alpha, mask, min_pixels=50)
+    assert thick["alpha"].max() < 1.0 and (opaque["alpha"] == 1.0).all()
+    assert thick["index"]["MNDWI"]["cloud"]["auc"] > 0.9  # water still visible through the thick cloud
+    assert abs(opaque["index"]["MNDWI"]["cloud"]["diff"]) < 1e-9  # no water/land difference left
+    assert opaque["index"]["MNDWI"]["clear"]["auc"] == thick["index"]["MNDWI"]["clear"]["auc"] > 0.9  # reference
+    assert thick["corr"]["B8"] > 0.3 and abs(opaque["corr"]["B8"]) < 0.3
 
 
 # ----------------------------------------------------------------------------- sanity check, bins, selection

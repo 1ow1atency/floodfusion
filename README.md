@@ -21,8 +21,9 @@ Bolivia split of Sen1Floods11, which is used for evaluation only.
   modality) with cross-attention fusion.
 - **Done:** robustness training (synthetic clouds on Sentinel-2, modality dropout) for early
   fusion and FusionNet.
-- **In progress:** robustness evaluation on test and Bolivia (synthetic cloud cover,
-  missing modality, real-cloud bins); code ready (`notebooks/04_evaluate.ipynb`), not yet run.
+- **In progress:** robustness evaluation on test and Bolivia (synthetic cloud cover, thick and
+  opaque; missing modality; real-cloud bins). The code is ready (`notebooks/04_evaluate.ipynb`)
+  but not yet run.
 
 ## Preliminary results
 
@@ -53,6 +54,18 @@ IoU under fixed synthetic clouds (`val_iou_cloud50`, about 0.77) is close to Fus
 (about 0.78). The question for the robustness evaluation is therefore: **does the architecture
 still matter once both models get the same robustness training?**
 
+**Caveat: the training-time synthetic clouds are semi-transparent.** Inside the cloud mask the
+median opacity is about 0.8, and water still stands out from land through the cloud (NDWI AUC
+0.98, about the same as in clear sky; [docs/cloud_leakage.md](docs/cloud_leakage.md)). This
+explains why the optical-only robust model scores as well under these clouds as FusionNet.
+
+The robustness evaluation therefore reports two settings:
+- **Thick:** the clouds as trained.
+- **Opaque:** the same cloud masks with opacity 1, so no ground signal survives under the
+  cloud.
+
+**Opaque results are the stricter test.** Training is unchanged.
+
 ## Repository layout
 
 ```
@@ -60,7 +73,8 @@ src/floodfusion/   the package (all logic lives here)
   data.py, chips.py      Sen1Floods11 dataset; missing-value, clipping and normalisation rules
   stats.py               normalisation statistics (train split only)
   clouds.py              real cloud cover per chip (s2cloudless, optional `clouds` extra)
-  clouds_synth.py        synthetic clouds for Sentinel-2 (robustness training)
+  clouds_synth.py        synthetic clouds for Sentinel-2 (robustness training; opaque variant for evaluation)
+  cloud_leakage.py       how much ground signal survives under the synthetic clouds
   transforms.py          crops/flips/rotations, synthetic clouds, modality dropout
   models.py              U-Net baselines and FusionNet
   losses.py, metrics.py  cross-entropy + Dice loss; water IoU from pooled confusion counts
@@ -113,7 +127,9 @@ Never change hyperparameters based on test or bolivia results.
 
 After all runs are trained and evaluated, `notebooks/04_evaluate.ipynb` runs the robustness
 evaluation (`scripts/robustness_eval.py`) over every run folder and writes `robustness.csv`,
-`summary.md` and figures to `floodfusion/results/` on Drive. This is final reporting only.
+`summary.md` and figures to `floodfusion/results/` on Drive. It sweeps cloud coverage for
+thick clouds (as trained) and opaque clouds (the stricter test), and also evaluates with S2
+removed. Expect about 15-25 min on a T4. This is final reporting only.
 
 ## Dataset and citation
 

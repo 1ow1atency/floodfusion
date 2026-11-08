@@ -64,6 +64,27 @@ epoch 95. With cloud augmentation and modality dropout, early fusion's `val_iou_
 (~0.77) is close to FusionNet's (~0.78). Updated Stage 5 hypothesis: **does the architecture
 still matter once both get the same robustness training?**
 
+**Synthetic clouds are semi-transparent (found 2026-11-08).** `s2_only_robust` reaches a
+`val_iou_cloud50` of ~0.79, as high as `fusion_robust`, without any SAR. The thick clouds used
+in training (and in `val_iou_cloud50`) are not opaque. Measured on the 12 local chips with
+< 10% real cloud, evaluation clouds at 50% and 100% coverage, 3 cloud seeds
+([docs/cloud_leakage.md](cloud_leakage.md), `scripts/cloud_leakage.py`):
+- **Opacity:** median opacity inside the cloud mask is 0.78-0.81, and 99% of covered pixels
+  are below 0.9 (nominal 0.9-1.0, reduced by texture, edge thinning and soft edges; minimum
+  0.33 at cloud edges).
+- **Ground signal:** the clouded bands still correlate with the ground (r ≈ 0.3-0.4 in B8
+  and B11).
+- **Water vs land:** NDWI still separates water from land under the cloud almost as well as
+  in clear sky (AUC 0.98 vs 0.98). The contrast shrinks about 8×, but so does the noise.
+
+A model trained on these clouds can learn to read water through them.
+
+Training and the training-time clouds stay unchanged, because all robust models are already
+trained with them. The robustness evaluation adds an **opaque** setting: the same masks, seeds
+and coverage with opacity 1 inside the mask (AUC 0.50, no ground signal). **Opaque results are
+the stricter test of cloud robustness; thick results show robustness to semi-transparent
+cloud only.**
+
 Model selection rule (all models, including the robust ones): `best.pt` is chosen on the
 real valid split. Valid IoU with fixed synthetic clouds (`val_iou_cloud50`) is logged every
 epoch for information only and never used for selection.
@@ -79,7 +100,8 @@ epoch for information only and never used for selection.
 - [ ] TODO: Audit s2cloudless masks before using real-cloud bins: several Paraguay train chips are
   marked 100% cloud but show clear ground or only haze (e.g. Paraguay_215904, Paraguay_36146).
   Check probability maps, a stricter threshold, and spot-check chips per bin.
-- [ ] IoU vs cloud-cover curves for all models
+- [ ] IoU vs cloud-cover curves for all models: thick (as trained) and opaque clouds, plus S2
+  removed (`notebooks/04_evaluate.ipynb`; code ready, not yet run on the trained models)
 - [ ] Evaluation on held-out Bolivia split (evaluation only, never tuned on)
 
 ## 6. Stretch goals (only if time allows)

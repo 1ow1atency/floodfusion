@@ -306,29 +306,46 @@ def _style_axes(ax):
     ax.tick_params(colors=_INK_2)
 
 
-def plot_iou_vs_coverage(stats: dict[str, list[tuple[float, float, float]]], styles: dict[str, dict],
-                         out_path: str | Path, title: str) -> Path:
-    """One line per model: mean water IoU over cloud seeds vs synthetic cloud coverage, with a
-    +-1 std band. ``stats`` = {label: [(coverage, mean, std), ...]}."""
-    fig, ax = plt.subplots(figsize=(8.6, 5.0), constrained_layout=True)
-    _style_axes(ax)
-    for label, pts in stats.items():
-        if not pts:
-            continue
-        st = styles[label]
-        x = np.array([p[0] for p in pts]) * 100
-        mu, sd = np.array([p[1] for p in pts]), np.array([p[2] for p in pts])
-        ax.fill_between(x, mu - sd, mu + sd, color=st["colour"], alpha=0.12, linewidth=0)
-        ax.plot(x, mu, color=st["colour"], linewidth=2, linestyle=(0, (5, 3)) if st["dashed"] else "-",
-                solid_capstyle="round", label=label)
-        ax.plot(x, mu, "o", color=st["colour"], markersize=6, markeredgecolor="white", markeredgewidth=1.5)
-    ax.set_xlim(-3, 103); ax.set_ylim(0, 1)
-    ax.set_xticks([0, 20, 40, 60, 80, 100]); ax.set_xticklabels([f"{v}%" for v in (0, 20, 40, 60, 80, 100)])
-    ax.set_xlabel("synthetic cloud coverage of S2 (thick clouds)", color=_INK)
-    ax.set_ylabel("water IoU (pooled), mean ± std over cloud seeds", color=_INK)
-    ax.set_title(title, color=_INK, loc="left")
-    leg = ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), frameon=False, title="model (dashed = no robustness training)",
-                    title_fontsize=8, fontsize=9)
+def plot_iou_vs_coverage(panels: Sequence[tuple[str, dict[str, list[tuple[float, float, float]]]]],
+                         styles: dict[str, dict], out_path: str | Path, title: str,
+                         reference: dict[str, float] | None = None, reference_label: str = "S2\nremoved") -> Path:
+    """Side-by-side panels with a shared y-axis, one per cloud setting (``panels`` = [(panel
+    title, {label: [(coverage, mean, std), ...]})]): one line per model, mean water IoU over
+    cloud seeds vs synthetic cloud coverage, with a +-1 std band. ``reference`` = {label: IoU}
+    is drawn in every panel as a point beyond 100% (the extreme: S2 removed altogether)."""
+    reference = reference or {}
+    fig, axes = plt.subplots(1, len(panels), figsize=(5.2 * len(panels) + 2.4, 5.0), sharey=True,
+                             constrained_layout=True, squeeze=False)
+    ref_x = 122
+    for ax, (panel_title, stats) in zip(axes[0], panels):
+        _style_axes(ax)
+        for label, pts in stats.items():
+            if not pts:
+                continue
+            st = styles[label]
+            ls = (0, (5, 3)) if st["dashed"] else "-"
+            x = np.array([p[0] for p in pts]) * 100
+            mu, sd = np.array([p[1] for p in pts]), np.array([p[2] for p in pts])
+            ax.fill_between(x, mu - sd, mu + sd, color=st["colour"], alpha=0.12, linewidth=0)
+            ax.plot(x, mu, color=st["colour"], linewidth=2, linestyle=ls, solid_capstyle="round", label=label)
+            ax.plot(x, mu, "o", color=st["colour"], markersize=6, markeredgecolor="white", markeredgewidth=1.5)
+            if label in reference and x[-1] == 100:
+                ax.plot([100, ref_x], [mu[-1], reference[label]], color=st["colour"], linewidth=1, linestyle=":")
+                ax.plot(ref_x, reference[label], "D", color=st["colour"], markersize=6, markeredgecolor="white",
+                        markeredgewidth=1.5)
+        ticks = [0, 20, 40, 60, 80, 100]
+        if reference:
+            ax.axvline(111, color=_GRID, linewidth=1.2)
+        ax.set_xlim(-3, ref_x + 6 if reference else 103); ax.set_ylim(0, 1)
+        ax.set_xticks(ticks + ([ref_x] if reference else []))
+        ax.set_xticklabels([f"{v}%" for v in ticks] + ([reference_label] if reference else []))
+        ax.set_xlabel("synthetic cloud coverage of S2", color=_INK)
+        ax.set_title(panel_title, color=_INK, loc="left", fontsize=10.5)
+    axes[0][0].set_ylabel("water IoU (pooled), mean ± std over cloud seeds", color=_INK)
+    fig.suptitle(title, color=_INK, x=0.01, ha="left")
+    handles, labels = axes[0][0].get_legend_handles_labels()
+    leg = fig.legend(handles, labels, loc="outside right center", frameon=False, fontsize=9, title_fontsize=8,
+                     title="model (dashed = no\nrobustness training)")
     for t in leg.get_texts():
         t.set_color(_INK)
     out_path = Path(out_path)

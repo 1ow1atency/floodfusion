@@ -57,6 +57,12 @@ Thin cirrus is ice cloud high above that vapour: B10 1000 (the cirrus band exist
 see it) and darker SWIR (B11 2800, B12 1900), and it is scaled down by its low opacity.
 Not modelled: cloud shadows, and haze outside the cloud mask.
 
+Thick clouds are NOT fully opaque: inside the covered mask the opacity is
+opacity x ramp x texture x edge thinning, so a few percent to (at edges) more than half of
+the ground signal remains (measured in docs/cloud_leakage.md). Training uses these clouds as
+they are. The robustness evaluation adds a stricter "opaque" variant (``opaque_alpha``): the
+same mask with opacity 1 inside it.
+
 ``cloudify(s2, coverage, seed)`` is deterministic: the same inputs and seed always give
 the same clouds, so every model can be evaluated on identical cloudy inputs. Training
 draws coverage and seed from torch's RNG (floodfusion.transforms.SyntheticClouds).
@@ -243,6 +249,16 @@ def apply_clouds(s2: np.ndarray, alpha: np.ndarray, cloud_dn: np.ndarray, shade:
     return ((1 - a) * s2 + a * cloud).astype(np.float32)
 
 
+def opaque_alpha(alpha: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    """Evaluation only (never used in training): opacity forced to 1 inside the covered mask,
+    so ``apply_clouds`` replaces the ground there entirely by the cloud spectrum (x shade);
+    0 * ground leaves no ground signal. The soft fringe outside the mask is unchanged, so the
+    cloud's shape, coverage and spectrum are exactly those of the thick cloud it came from."""
+    if alpha.shape != mask.shape or mask.dtype != bool:
+        raise ValueError(f"alpha {alpha.shape} and bool mask {mask.shape, mask.dtype} must match")
+    return np.where(mask, np.float32(1.0), alpha).astype(np.float32)
+
+
 def cloudify(s2: np.ndarray, coverage: float, seed: int, thin: bool | None = None,
              thin_p: float = THIN_P, return_alpha: bool = False):
     """Deterministic synthetic clouds on raw S2 (all 13 bands, DN, NaN = missing).
@@ -294,6 +310,12 @@ def chip_seed(chip_id: str, base: int = EVAL_CLOUD_SEED) -> int:
     """Stable per-chip seed (CRC32 of base and chip id: the same in every process and Python
     version, unlike hash())."""
     return zlib.crc32(f"{base}:{chip_id}".encode())
+
+
+def eval_cloud_seed(chip_id: str, coverage: float, cloud_seed: int) -> int:
+    """Seed of a robustness-evaluation cloud: a function of (chip id, coverage, cloud seed)
+    only (CRC32, stable across processes), so every model gets identical clouds."""
+    return zlib.crc32(f"robustness:{cloud_seed}:{int(round(coverage * 100))}:{chip_id}".encode())
 
 
 class FixedClouds:
