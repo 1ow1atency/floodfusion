@@ -1,0 +1,53 @@
+# Ablation of fusion_robust: concat + 1x1 conv fusion at every level instead of cross-attention at
+# the two deepest levels. Everything else is identical to fusion_robust.yaml (checked by a test):
+# separate encoders and robustness training are kept, so the comparison isolates cross-attention.
+name: fusion_concat_robust
+seed: 0
+output_dir: /content/drive/MyDrive/floodfusion/runs   # one folder per run: <output_dir>/<name>_seed<seed>
+
+data:
+  root: /content/drive/MyDrive/floodfusion/data/sen1floods11
+  stats: configs/band_stats.json   # train-split stats (relative to the repo root; run from there)
+  modalities: [s1, s2]
+  s2_bands: null                   # null = all 13 S2 bands
+  train_split: train
+  val_split: valid                 # model selection on valid only; test/bolivia are refused
+  crop_size: 256                   # random 256x256 training crops; validation uses full 512x512 chips
+  num_workers: 2                   # Colab gives 2 vCPUs
+
+model:
+  arch: fusionnet
+  encoder: resnet34                # one per modality, each ImageNet-initialised like the baselines
+  encoder_weights: imagenet
+  fusion: concat                   # the ablated key: concat + 1x1 conv at all 5 levels, no attention
+  attention_heads: 8
+
+train:
+  batch_size: 16                   # 15 full steps per epoch on 252 train chips
+  val_batch_size: 8                # full 512x512 chips, no gradients
+  epochs: 100                      # each epoch sees every chip once, as one random quarter-size crop
+  lr: 5.0e-4                       # AdamW; cosine decay per step down to lr * min_lr_ratio
+  min_lr_ratio: 0.01
+  weight_decay: 1.0e-2             # decoupled (AdamW) weight decay, PyTorch default
+  amp: true                        # float16 mixed precision on CUDA only
+  save_last_every: 10              # last.pt is ~590 MB (2 encoders): every 10 epochs + final epoch keeps
+                                   # Drive's Bin at ~5.9 GB per run; a resume loses at most 10 epochs.
+                                   # best.pt (~196 MB) is written whenever valid IoU improves.
+  ce_weight: 1.0
+  dice_weight: 1.0
+
+wandb:
+  enabled: true                    # --no-wandb (or enabled: false) to run without it
+  project: floodfusion
+  entity: null
+
+augment:                           # training split only; validation stays real (model selection)
+  synthetic_clouds:                # on raw S2 (DN) before clipping/normalisation; S1 and labels untouched
+    enabled: true
+    p: 0.5                         # half the chips stay as acquired, so clear-sky accuracy is still trained
+    coverage: [0.1, 1.0]           # uniform cover of the cloudy half, up to full overcast
+    thin_p: 0.3                    # 30% thin / cirrus-like, 70% thick
+  modality_dropout:                # one draw per sample: never both modalities dropped
+    enabled: true
+    p_drop_s1: 0.1                 # keeps the optical path usable on its own
+    p_drop_s2: 0.2                 # S2 missing entirely (stands in for 100% opaque cloud)

@@ -18,6 +18,12 @@ Settings, per split (test, bolivia):
     U-Net: that modality's channels set to 0 after normalisation (= train band mean).
   * real_clouds: the clean predictions pooled per s2cloudless cloud-cover bin (docs/cloud_cover.csv).
 
+Training seeds: runs of one config (``<name>_seed0``, ``_seed1``, ...) are evaluated as separate
+runs (robustness.csv, one row per run; the sanity checks are per run) and grouped by config name
+for reporting (``aggregate_rows`` -> robustness_by_model.csv, the summary tables and figures):
+each run is first averaged over its cloud seeds, then mean ± sample std over training seeds. A
+config with one run keeps the std over cloud seeds (training-seed variance is then unmeasured).
+
 Not applicable / unaffected (marked in the outputs, never silently filled):
   * a model without S2 is unaffected by clouds and by removing S2: its clean result is reported;
   * a model without S1 is unaffected by removing S1;
@@ -66,6 +72,10 @@ QUAL_SETTINGS = (("thick_clouds", 1.0), ("opaque_clouds", 1.0))
 QUAL_CHIPS = 4
 CSV_COLUMNS = ("model", "split", "setting", "coverage", "cloud_seed", "iou", "precision", "recall",
                "n_chips", "note")
+# robustness_by_model.csv: one row per (config, split, setting, coverage), over training seeds
+AGG_COLUMNS = ("model", "split", "setting", "coverage", "n_seeds", "train_seeds", "iou", "iou_std", "std_over",
+               "precision", "recall", "n_chips", "note")
+STD_TRAIN, STD_CLOUD = "training seeds", "cloud seeds"
 NOTE_NO_S2 = "unaffected: model has no S2 input (clean result)"
 NOTE_NO_S1 = "unaffected: model has no S1 input (clean result)"
 NOTE_NA_S2 = "n/a: S2 is the only input (no S2-removed result beyond 100% cloud)"
@@ -147,6 +157,13 @@ class EvalModel:
     epoch: int
     smoke: bool
     model: torch.nn.Module | None = None
+    config: str = ""   # config name = the model in the grouped tables (default: cfg["name"], else label)
+    seed: int = -1     # training seed (default: cfg["seed"], else 0)
+
+    def __post_init__(self):
+        self.config = self.config or self.cfg.get("name", self.label)
+        if self.seed < 0:
+            self.seed = int(self.cfg.get("seed", 0))
 
 
 def find_runs(runs_root: str | Path) -> list[Path]:
@@ -190,6 +207,20 @@ def load_models(run_dirs: Sequence[str | Path], device: torch.device, *, allow_s
     return out
 
 
+def model_groups(models: Sequence[EvalModel]) -> list[tuple[str, list[EvalModel]]]:
+    """[(config name, its runs sorted by training seed)] in the models' order (first run of each)."""
+    out: dict[str, list[EvalModel]] = {}
+    for m in models:
+        out.setdefault(m.config, []).append(m)
+    return [(c, sorted(runs, key=lambda m: m.seed)) for c, runs in out.items()]
+
+
+def qual_runs(models: Sequence[EvalModel]) -> list[EvalModel]:
+    """The run shown in the qualitative figure for each QUAL_MODELS config: its lowest training seed."""
+    groups = dict(model_groups(models))
+    return [groups[c][0] for c in QUAL_MODELS if c in groups]
+
+
 def status(mods: tuple[str, ...], setting: str) -> str:
     """'eval', or the note explaining why the setting is not run for this model."""
     if setting in ("clean", "real_clouds"):
@@ -230,10 +261,12 @@ def evaluate_split(models: Sequence[EvalModel], split: str, root: str | Path, *,
     """Run every applicable (setting, model) on one split.
 
     Returns ({(label, setting, coverage, cloud_seed): WaterConfusion}, {(label, setting, coverage):
-    {chip: predicted labels}} for ``qual_ids`` and QUAL_MODELS in QUAL_SETTINGS with cloud seed 0, n_chips)."""
+    {chip: predicted labels}} for ``qual_ids`` and the ``qual_runs`` in QUAL_SETTINGS with cloud seed 0,
+    n_chips)."""
     mods = tuple(m for m in ("s1", "s2") if any(m in em.mods for em in models))
     ref = models[0]
     qual_ids = set(qual_ids)
+    qual_labels = {m.label for m in qual_runs(models)}
     confs, preds, n_chips = {}, {}, 0
     for setting, cov, seed in _settings():
         active = [m for m in models if status(m.mods, setting) == "eval"]
@@ -259,7 +292,7 @@ def evaluate_split(models: Sequence[EvalModel], split: str, root: str | Path, *,
                     with _autocast(device, amp):
                         logits = forward_model(m.model, batch, m.cfg, device)
                     cur[m.label].update(logits.float(), y, list(batch["id"]))
-                    if keep and qual_ids and m.label in QUAL_MODELS:
+                    if keep and qual_ids and m.label in qual_labels:
                         lab = logits.argmax(1).cpu().numpy().astype(np.uint8)
                         for i, cid in enumerate(batch["id"]):
                             if cid in qual_ids:
@@ -439,6 +472,96 @@ def sweep_stats(rows: list[dict], model: str, split: str, metric: str = "iou",
     return out
 
 
+def aggregate_rows(rows: list[dict], groups: Sequence[tuple[str, Sequence[EvalModel]]]) -> list[dict]:
+    """One row per (config, split, setting, coverage) from the per-run ``rows``. Each run is first
+    averaged over its cloud seeds (NaN IoUs dropped, as in ``sweep_stats``); the model's value is
+    the mean over its runs (training seeds). ``iou_std``: sample std over training seeds with 2+
+    runs, else over cloud seeds (2+ cloud seeds), else 0. Every run of a config must have the
+    same settings; notes and chip counts are taken from the first run. Values are full-precision
+    floats (NaN = no result); ``write_agg_csv`` rounds them like robustness.csv."""
+    by_key: dict[tuple, list[dict]] = {}
+    for r in rows:
+        by_key.setdefault((r["model"], r["split"], r["setting"], r["coverage"]), []).append(r)
+    out = []
+    for config, runs in groups:
+        first = runs[0].label
+        for (_, split, setting, cov) in [k for k in by_key if k[0] == first]:  # row order of the first run
+            per_run = [by_key.get((m.label, split, setting, cov), []) for m in runs]
+            if not all(per_run):
+                missing = [m.label for m, p in zip(runs, per_run) if not p]
+                raise ValueError(f"{config}: runs {missing} have no result for {split} / {setting} / {cov!r}")
+
+            def run_means(metric):
+                means = []
+                for p in per_run:
+                    vals = [v for v in (_num(r[metric]) for r in p) if not math.isnan(v)]
+                    means.append(float(np.mean(vals)) if vals else math.nan)
+                return means
+
+            iou = run_means("iou")
+            if len(runs) > 1:
+                std, over = (float(np.std(iou, ddof=1)), STD_TRAIN) if not any(map(math.isnan, iou)) else (math.nan, "")
+            else:
+                vals = [v for v in (_num(r["iou"]) for r in per_run[0]) if not math.isnan(v)]
+                std, over = (float(np.std(vals, ddof=1)), STD_CLOUD) if len(vals) > 1 else (0.0 if vals else math.nan, "")
+            mean = float(np.mean(iou)) if not any(map(math.isnan, iou)) else math.nan
+            out.append({"model": config, "split": split, "setting": setting, "coverage": cov, "n_seeds": len(runs),
+                        "train_seeds": " ".join(str(m.seed) for m in runs), "iou": mean, "iou_std": std,
+                        "std_over": over, "precision": float(np.mean(run_means("precision"))),
+                        "recall": float(np.mean(run_means("recall"))), "n_chips": per_run[0][0]["n_chips"],
+                        "note": per_run[0][0]["note"]})
+    return out
+
+
+def agg_csv_row(r: dict) -> dict:
+    """An ``aggregate_rows`` row as written to robustness_by_model.csv (6 decimals, NaN -> empty)."""
+    return {k: _fmt(v) if k in ("iou", "iou_std", "precision", "recall") else v for k, v in r.items()}
+
+
+def write_agg_csv(agg: list[dict], path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=AGG_COLUMNS)
+        w.writeheader()
+        w.writerows(agg_csv_row(r) for r in agg)
+    return path
+
+
+def _agg(agg: list[dict], model: str, split: str, setting: str, coverage: str = "") -> dict:
+    return next(r for r in agg if r["model"] == model and r["split"] == split and r["setting"] == setting
+                and r["coverage"] == coverage)
+
+
+def agg_sweep(agg: list[dict], model: str, split: str, setting: str = "thick_clouds") -> list[tuple[float, float, float]]:
+    """[(coverage, mean IoU, std)] of a model's synthetic cloud sweep from ``aggregate_rows``."""
+    out = []
+    for cov in COVERAGES:
+        r = next((r for r in agg if r["model"] == model and r["split"] == split and r["setting"] == setting
+                  and r["coverage"] == f"{cov:.1f}"), None)
+        if r and not math.isnan(_num(r["iou"])):
+            out.append((cov, _num(r["iou"]), _num(r["iou_std"])))
+    return out
+
+
+def _band_label(groups) -> str:
+    multi = [len(runs) > 1 for _, runs in groups]
+    if all(multi):
+        return STD_TRAIN
+    return STD_CLOUD if not any(multi) else f"{STD_TRAIN} (2+ seeds) or {STD_CLOUD} (1 seed)"
+
+
+def _agg_sweep_table(agg, groups, split, setting) -> list[str]:
+    L = ["| model | seeds | " + " | ".join(f"{c:.0%}" for c in COVERAGES) + " |",
+         "|---|--:|" + "--:|" * len(COVERAGES)]
+    for config, runs in groups:
+        st = {c: (mu, sd) for c, mu, sd in agg_sweep(agg, config, split, setting)}
+        unaffected = any(r["note"] == NOTE_NO_S2 for r in agg if r["model"] == config and r["split"] == split
+                         and r["setting"] == setting)
+        cells = [f"{st[c][0]:.4f} ± {st[c][1]:.4f}" if c in st else "–" for c in COVERAGES]
+        L.append(f"| {config}{' †' if unaffected else ''} | {len(runs)} | " + " | ".join(cells) + " |")
+    return L
+
+
 def _sweep_table(rows, labels, split, setting) -> list[str]:
     L = ["| model | " + " | ".join(f"{c:.0%}" for c in COVERAGES) + " |", "|---|" + "--:|" * len(COVERAGES)]
     for lab in labels:
@@ -452,14 +575,19 @@ def _sweep_table(rows, labels, split, setting) -> list[str]:
 
 def summary_markdown(rows: list[dict], models: Sequence[EvalModel], splits: Sequence[str],
                      unbinned: dict[str, int], cache_note: str = "", warnings: Sequence[str] = ()) -> str:
-    labels = [m.label for m in models]
+    groups = model_groups(models)
+    agg = aggregate_rows(rows, groups)
+    multi = any(len(runs) > 1 for _, runs in groups)
     L = ["# Robustness evaluation", "",
          "**Final reporting only.** Nothing here may be used to tune hyperparameters or to select models.",
          "Each model is its `best.pt`, selected on the real valid split. Metric: pooled water IoU "
          "(label `-1` ignored); precision and recall of the water class.", ""]
-    L += ["| model | run | best.pt epoch | modalities | robustness training |", "|---|---|--:|---|---|"]
-    for m in models:
-        L.append(f"| {m.label} | `{m.run_dir.name}` | {m.epoch} | {', '.join(m.mods)} | {'yes' if m.robust else 'no'} |")
+    L += ["| model | run | training seed | best.pt epoch | modalities | robustness training |",
+          "|---|---|--:|--:|---|---|"]
+    for config, runs in groups:
+        for m in runs:
+            L.append(f"| {config} | `{m.run_dir.name}` | {m.seed} | {m.epoch} | {', '.join(m.mods)} | "
+                     f"{'yes' if m.robust else 'no'} |")
     if any(m.smoke for m in models):
         L += ["", "**WARNING: smoke-test checkpoints. These numbers are a pipeline check, not results.**"]
     if warnings:
@@ -472,57 +600,72 @@ def summary_markdown(rows: list[dict], models: Sequence[EvalModel], splits: Sequ
           "entirely by the cloud spectrum. **The stricter test of cloud robustness.** Its coverage 0 is "
           "evaluated through the opaque path and checked equal to clean.",
           f"Each chip's cloud depends only on (chip id, coverage, cloud seed), so every model sees identical "
-          f"clouds; {len(CLOUD_SEEDS)} cloud seeds per coverage, mean ± std over cloud seeds (sample std). "
-          "Seed of every run: see the run folder.",
+          f"clouds; {len(CLOUD_SEEDS)} cloud seeds per coverage.",
+          "**Training seeds** (column `seeds`): each run is first averaged over its cloud seeds. With 2 or more "
+          "training seeds, a model's value is the mean over its runs and ± is the sample std **over training "
+          "seeds**; also where only one value per run exists (clean, missing modality, real-cloud bins). With "
+          "1 training seed, ± is the sample std **over cloud seeds** (training-seed variance not measured) and "
+          "single-value settings have no ±."
+          + (" Per-run sweeps: end of each split." if multi else ""),
           "Missing modality: the input is set to 0 (= train band mean after normalisation); FusionNet also "
           "gets the modality mask. S2 removed is the extreme beyond 100% cloud.", ""]
+
+    def pr(r):
+        return f"({_num(r['precision']):.3f} / {_num(r['recall']):.3f})"
+
     for split in splits:
         n = next((r["n_chips"] for r in rows if r["split"] == split and r["setting"] == "thick_clouds"), "?")
         L += [f"## {split} ({n} chips)", "", "### Opaque synthetic clouds (stricter test): water IoU", ""]
-        L += _sweep_table(rows, labels, split, "opaque_clouds")
+        L += _agg_sweep_table(agg, groups, split, "opaque_clouds")
         L += ["", "### Thick synthetic clouds (as trained, semi-transparent): water IoU", ""]
-        L += _sweep_table(rows, labels, split, "thick_clouds")
+        L += _agg_sweep_table(agg, groups, split, "thick_clouds")
         L += ["", "### At 100% cloud: water IoU (precision / recall)", "",
-              "| model | clean | thick 100% | opaque 100% | S2 removed |", "|---|--:|--:|--:|--:|"]
-        for lab in labels:
+              "| model | seeds | clean | thick 100% | opaque 100% | S2 removed |", "|---|--:|--:|--:|--:|--:|"]
+        for config, runs in groups:
+            k = len(runs)
             cells = []
-            for setting, cov in (("thick_clouds", 0.0), ("thick_clouds", 1.0), ("opaque_clouds", 1.0)):
-                st = {k: {c: (mu, sd) for c, mu, sd in sweep_stats(rows, lab, split, k, setting)}
-                      for k in ("iou", "precision", "recall")}
-                iou, sd = st["iou"][cov]
-                cells.append(f"{iou:.4f}{f' ± {sd:.4f}' if cov else ''} "
-                             f"({st['precision'][cov][0]:.3f} / {st['recall'][cov][0]:.3f})")
-            r = next(r for r in rows if r["model"] == lab and r["split"] == split and r["setting"] == "s2_removed")
-            cells.append("n/a" if r["note"].startswith("n/a") else
-                         f"{_num(r['iou']):.4f} ({_num(r['precision']):.3f} / {_num(r['recall']):.3f})")
-            unaffected = "s2" not in next(m.mods for m in models if m.label == lab)
-            L.append(f"| {lab}{' †' if unaffected else ''} | " + " | ".join(cells) + " |")
+            for setting, cov in (("thick_clouds", "0.0"), ("thick_clouds", "1.0"), ("opaque_clouds", "1.0")):
+                r = _agg(agg, config, split, setting, cov)
+                sd = f" ± {_num(r['iou_std']):.4f}" if cov != "0.0" or k > 1 else ""
+                cells.append(f"{_num(r['iou']):.4f}{sd} {pr(r)}")
+            r = _agg(agg, config, split, "s2_removed")
+            sd = f" ± {_num(r['iou_std']):.4f}" if k > 1 else ""
+            cells.append("n/a" if r["note"].startswith("n/a") else f"{_num(r['iou']):.4f}{sd} {pr(r)}")
+            unaffected = "s2" not in runs[0].mods
+            L.append(f"| {config}{' †' if unaffected else ''} | {k} | " + " | ".join(cells) + " |")
         L += ["", "### Missing modality: water IoU (precision / recall)", "",
-              "| model | clean | S2 removed | S1 removed |", "|---|--:|--:|--:|"]
-        for lab in labels:
+              "| model | seeds | clean | S2 removed | S1 removed |", "|---|--:|--:|--:|--:|"]
+        for config, runs in groups:
+            k = len(runs)
             cells = []
-            for setting in ("thick_clouds", "s2_removed", "s1_removed"):
-                r = next(r for r in rows if r["model"] == lab and r["split"] == split and r["setting"] == setting
-                         and (setting != "thick_clouds" or r["coverage"] == "0.0"))
+            for setting, cov in (("thick_clouds", "0.0"), ("s2_removed", ""), ("s1_removed", "")):
+                r = _agg(agg, config, split, setting, cov)
                 if r["note"].startswith("n/a"):
                     cells.append("n/a")
                 else:
                     mark = " †" if r["note"].startswith("unaffected") else ""
-                    cells.append(f"{_num(r['iou']):.4f} ({_num(r['precision']):.3f} / {_num(r['recall']):.3f}){mark}")
-            L.append(f"| {lab} | " + " | ".join(cells) + " |")
+                    sd = f" ± {_num(r['iou_std']):.4f}" if k > 1 else ""
+                    cells.append(f"{_num(r['iou']):.4f}{sd} {pr(r)}{mark}")
+            L.append(f"| {config} | {k} | " + " | ".join(cells) + " |")
         L += ["", "### Real clouds (s2cloudless bins): water IoU (chips)", "",
-              "| model | " + " | ".join(CLOUD_BIN_LABELS) + " |", "|---|" + "--:|" * len(CLOUD_BIN_LABELS)]
-        for lab in labels:
+              "| model | seeds | " + " | ".join(CLOUD_BIN_LABELS) + " |", "|---|--:|" + "--:|" * len(CLOUD_BIN_LABELS)]
+        for config, runs in groups:
             cells = []
             for b in CLOUD_BIN_LABELS:
-                r = next(r for r in rows if r["model"] == lab and r["split"] == split and r["setting"] == "real_clouds"
-                         and r["coverage"] == b)
-                v = _num(r["iou"])
+                r = _agg(agg, config, split, "real_clouds", b)
+                sd = f" ± {_num(r['iou_std']):.4f}" if len(runs) > 1 else ""
                 cells.append("– (0)" if not int(r["n_chips"]) else
-                             f"{v:.4f} ({r['n_chips']}){' ⚠' if r['note'].startswith('unreliable') else ''}")
-            L.append(f"| {lab} | " + " | ".join(cells) + " |")
+                             f"{_num(r['iou']):.4f}{sd} ({r['n_chips']}){' ⚠' if r['note'].startswith('unreliable') else ''}")
+            L.append(f"| {config} | {len(runs)} | " + " | ".join(cells) + " |")
         L += ["", f"⚠ = {NOTE_UNRELIABLE}. Chips without a cloud fraction (no valid S2): {unbinned.get(split, 0)}.",
               f"_{AUDIT_NOTE}_", ""]
+        if multi:
+            labels = [m.label for _, runs in groups for m in runs]
+            L += ["### Per run: opaque synthetic clouds, water IoU (± over cloud seeds)", ""]
+            L += _sweep_table(rows, labels, split, "opaque_clouds")
+            L += ["", "### Per run: thick synthetic clouds, water IoU (± over cloud seeds)", ""]
+            L += _sweep_table(rows, labels, split, "thick_clouds")
+            L += [""]
     L += ["† = unaffected by this setting (model lacks the changed modality): its clean result is shown.",
           "n/a = the setting removes the model's only input (for s2_only, S2 removed = beyond 100% cloud).", ""]
     if cache_note:
@@ -591,27 +734,35 @@ def _run_robustness(run_dirs, root, out_dir, *, cloud_csv, splits, batch_size, n
                                                                      cloud_rows, split) if b["bin"] == "no cloud fraction")
         all_preds[split] = preds
     csv_path = write_csv(rows, out_dir / "robustness.csv")
+    groups = model_groups(models)
+    agg = aggregate_rows(rows, groups)
+    agg_path = write_agg_csv(agg, out_dir / "robustness_by_model.csv")
+    for config, runs in groups:
+        log(f"  {config}: {len(runs)} training seed(s) {[m.seed for m in runs]}")
     md = summary_markdown(rows, models, splits, unbinned, warnings=warnings,
                           cache_note=f"Clouds generated in this run (main process): {cache.generated}.")
     (out_dir / "summary.md").write_text(md + "\n")
-    written = {"csv": csv_path, "summary": out_dir / "summary.md"}
+    written = {"csv": csv_path, "by_model": agg_path, "summary": out_dir / "summary.md"}
     if figures:
-        styles = viz.model_styles([(m.label, m.family, m.robust) for m in models])
+        configs = [c for c, _ in groups]
+        styles = viz.model_styles([(c, runs[0].family, runs[0].robust) for c, runs in groups])
+        names = {c: f"{c} ({len(runs)} seeds)" if len(runs) > 1 else c for c, runs in groups}
+        band = _band_label(groups)
         for split in splits:
             reference = {}
-            for m in models:
-                r = next(r for r in rows if r["model"] == m.label and r["split"] == split and r["setting"] == "s2_removed")
-                if r["iou"] and "s2" in m.mods:
-                    reference[m.label] = _num(r["iou"])
+            for c, runs in groups:
+                r = _agg(agg, c, split, "s2_removed")
+                if not math.isnan(r["iou"]) and "s2" in runs[0].mods:
+                    reference[c] = r["iou"]
             panels = [("thick clouds (as trained, semi-transparent)",
-                       {m.label: sweep_stats(rows, m.label, split, setting="thick_clouds") for m in models}),
+                       {c: agg_sweep(agg, c, split, "thick_clouds") for c in configs}),
                       ("opaque clouds (no ground signal under cloud)",
-                       {m.label: sweep_stats(rows, m.label, split, setting="opaque_clouds") for m in models})]
+                       {c: agg_sweep(agg, c, split, "opaque_clouds") for c in configs})]
             written[f"coverage_{split}"] = viz.plot_iou_vs_coverage(
-                panels, styles, out_dir / f"iou_vs_coverage_{split}.png", reference=reference,
-                title=f"{split}: water IoU vs synthetic cloud coverage (◆ = S2 removed)")
-        written["real_bins"] = viz.plot_real_cloud_bins(rows, [m.label for m in models], styles, splits,
-                                                         out_dir / "real_cloud_bins.png", note=AUDIT_NOTE)
+                panels, styles, out_dir / f"iou_vs_coverage_{split}.png", reference=reference, names=names,
+                band_label=band, title=f"{split}: water IoU vs synthetic cloud coverage (◆ = S2 removed)")
+        written["real_bins"] = viz.plot_real_cloud_bins(agg, configs, styles, splits, out_dir / "real_cloud_bins.png",
+                                                         note=AUDIT_NOTE, names=names)
         if qual.get(qual_split):
             written["qualitative"] = _qualitative(models, root, qual_split, qual[qual_split], all_preds[qual_split],
                                                   cache, out_dir / "qualitative.png")
@@ -619,15 +770,18 @@ def _run_robustness(run_dirs, root, out_dir, *, cloud_csv, splits, batch_size, n
             log(f"  qualitative figure skipped: split {qual_split!r} not evaluated or has no chips")
     for k, p in written.items():
         log(f"wrote {p}")
-    return {"rows": rows, "models": models, "written": written, "clouds_generated": cache.generated,
-            "warnings": warnings}
+    return {"rows": rows, "by_model": agg, "models": models, "written": written,
+            "clouds_generated": cache.generated, "warnings": warnings}
 
 
 def _qualitative(models, root, split, chip_ids, preds, cache: CloudCache, out_path: Path) -> Path:
     from . import viz
 
-    by_label = {m.label: m for m in models}
-    shown = [lab for lab in QUAL_MODELS if lab in by_label and all((lab, *k) in preds for k in QUAL_SETTINGS)]
+    seeds = {c: len(runs) for c, runs in model_groups(models)}
+    shown = [m for m in qual_runs(models) if all((m.label, *k) in preds for k in QUAL_SETTINGS)]
+
+    def shown_name(m):  # the config name; its training seed only when the config has several
+        return m.config if seeds[m.config] == 1 else f"{m.config} (seed {m.seed})"
 
     def name(setting, cov):
         return f"{setting.split('_')[0]} {cov:.0%}"
@@ -640,7 +794,8 @@ def _qualitative(models, root, split, chip_ids, preds, cache: CloudCache, out_pa
                                         for st, c in QUAL_SETTINGS]
         rows.append({"chip_id": cid, "optical": optical, "s1": load_raw(root, cid, "s1"),
                      "label": load_label(root, cid),
-                     "preds": [(lab, name(st, c), preds[(lab, st, c)][cid]) for lab in shown for st, c in QUAL_SETTINGS]})
+                     "preds": [(shown_name(m), name(st, c), preds[(m.label, st, c)][cid])
+                               for m in shown for st, c in QUAL_SETTINGS]})
     stats = models[0].stats
     return viz.plot_qualitative(rows, out_path, s1_range=(stats["s1"]["clip_min"][0], stats["s1"]["clip_max"][0]),
                                 title=f"{split}: synthetic clouds (seed {CLOUD_SEEDS[0]}): thick = as trained, "

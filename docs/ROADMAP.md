@@ -110,8 +110,87 @@ epoch for information only and never used for selection.
     Paraguay_215904 / Paraguay_36146; test and Bolivia bin sizes), then decide whether to
     regenerate `cloud_cover.csv`.
 - [ ] IoU vs cloud-cover curves for all models: thick (as trained) and opaque clouds, plus S2
-  removed (`notebooks/04_evaluate.ipynb`; code ready, not yet run on the trained models)
-- [ ] Evaluation on held-out Bolivia split (evaluation only, never tuned on)
+  removed (`notebooks/04_evaluate.ipynb`). Run on the training-seed-0 models (results below);
+  repeat once the runs in the run plan are done.
+- [ ] Evaluation on held-out Bolivia split (evaluation only, never tuned on). Seed 0 done (below).
+
+### Robustness results (training seed 0)
+Source: `docs/results/robustness.csv` and `docs/results/summary.md` (notebook 04 on Colab). All
+seven models are training seed 0, each its `best.pt` selected on valid. The numbers are water
+IoU (label -1 ignored), averaged over 3 cloud seeds per coverage. Test has 90 chips and Bolivia 15.
+
+**Main result: test split, opaque synthetic clouds** (no ground signal under the cloud):
+
+| model | 0% | 20% | 40% | 60% | 80% | 100% | S2 removed |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| s1_only | 0.657 | 0.657 | 0.657 | 0.657 | 0.657 | 0.657 | 0.657 |
+| s2_only | 0.828 | 0.576 | 0.400 | 0.272 | 0.141 | 0.002 | n/a |
+| s2_only_robust | 0.821 | 0.682 | 0.526 | 0.383 | 0.215 | 0.064 | n/a |
+| early_fusion | 0.820 | 0.707 | 0.606 | 0.510 | 0.445 | 0.371 | 0.000 |
+| early_fusion_robust | 0.819 | 0.777 | 0.730 | 0.688 | 0.616 | 0.530 | 0.635 |
+| fusion | 0.818 | 0.738 | 0.664 | 0.607 | 0.566 | 0.546 | 0.000 |
+| fusion_robust | 0.813 | **0.783** | **0.750** | **0.717** | **0.687** | 0.650 | 0.639 |
+
+- **20–80% coverage:** `fusion_robust` has the highest IoU of all seven models at every
+  coverage, and it stays above SAR alone (`s1_only` 0.657) up to 80% (0.687).
+- **100% coverage:** it falls to 0.650, level with `s1_only` (0.657), not above it.
+  - It is still the best of the models that use S2.
+  - At the same 100% coverage, `early_fusion_robust` reaches 0.530 and `s2_only_robust` 0.064.
+- **Clear sky (0%):** `fusion_robust` costs little: 0.813 vs 0.828 for `s2_only`.
+
+**The thick (training) clouds leak ground signal.** `s2_only_robust` has no SAR input.
+- Test: it keeps 0.791 at 100% thick cloud, but drops to 0.064 at 100% opaque.
+- Bolivia: 0.783 at 100% thick vs 0.051 at 100% opaque.
+
+This confirms the leakage measured in [cloud_leakage.md](cloud_leakage.md): thick-cloud results
+overstate optical robustness, so the opaque setting is the one to report.
+
+**Bolivia (15 chips) disagrees at 100% opaque. Treat it as a small-sample caveat.**
+- At 100% opaque, `fusion` (no robustness training) scores 0.687, above `fusion_robust`
+  (0.618) and `s1_only` (0.625).
+- From 20% to 80% opaque, `fusion_robust` is again the best model on Bolivia (0.767, 0.741,
+  0.696, 0.677).
+- `fusion`'s Bolivia curve is not monotonic: 0.625 at 80%, then 0.687 at 100%.
+- With S2 removed, `fusion` scores 0.000 on Bolivia.
+
+So its 100% opaque score on 15 chips is not evidence of real robustness.
+
+**Caveat: single training seed.** Every model is one training run (seed 0). The ± values in
+`summary.md` are std over the 3 cloud seeds only (for example ± 0.0009 for `fusion_robust` at
+100% opaque on test), so they do not measure training variance. Gaps such as 0.650 vs 0.657
+cannot be called real until the runs below exist.
+
+### Run plan (multi-seed and ablation)
+Run each with notebook 03 (set `CONFIG` and `SEED`). Notebook 04 then groups the runs by
+config name and reports mean ± std over training seeds, keeping the per-run tables.
+`configs/fusion_concat_robust.yaml` is `fusion_robust.yaml` with `fusion: concat`, a test
+checks that this is the only difference. It tests whether cross-attention or just the separate
+encoders makes the difference.
+
+| priority | config | seeds | rough T4 time per run | total |
+|--:|---|---|--:|--:|
+| 1 | `s1_only` | 1, 2 | 25–40 min | 1–1.5 h |
+| 2 | `fusion_robust` | 1, 2 | 45–100 min | 1.5–3.5 h |
+| 3 | `early_fusion_robust` | 1, 2 | 35–60 min | 1–2 h |
+| 4 | `fusion_concat_robust` | 0, 1, 2 | 45–90 min | 2.5–4.5 h |
+
+Total about 6–11.5 h of T4 time, plus a few minutes per session for the data copy.
+- **Times are estimates, not measured.**
+  - Per-epoch guesses: 10–15 s for the S2-free U-Net and 15–25 s for the early-fusion U-Net.
+  - FusionNet: about 1.5–2× early fusion.
+  - Plus about 5–10 s per epoch for `val_iou_cloud50`.
+  - Replace them with the `epoch_time_s` column of the seed-0 runs' `metrics.csv` on Drive.
+- **Priority order:**
+  - `s1_only` comes first: it is the reference that `fusion_robust` meets at 100% opaque
+    cloud, and it is the cheapest run.
+  - The concat ablation comes last: it answers a follow-up question, not the main one.
+- **Drive space:** each finished FusionNet run keeps `last.pt` (~590 MB) and `best.pt`
+  (~196 MB); a U-Net run keeps ~294 MB + ~98 MB.
+  - The plan adds 5 FusionNet runs and 4 U-Net runs, about 5.5 GB.
+  - Only `best.pt` and `eval_*/` are needed for evaluation. A finished run's `last.pt` can be
+    deleted once you are sure it will not be resumed. Empty the Bin after each run.
+- **Notebook 04:** re-run it once at the end over all runs. Its runtime grows with the number
+  of runs (16 instead of 7).
 
 ## 6. Stretch goals (only if time allows)
 - [ ] _To be decided — check against CLAUDE.md scope first_

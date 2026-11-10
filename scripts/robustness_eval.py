@@ -5,8 +5,11 @@ FINAL REPORTING ONLY: never use these results to tune hyperparameters or select 
 Evaluates each run's best.pt under synthetic cloud coverage 0-100% (3 cloud seeds, identical
 clouds for every model) for thick clouds (as trained, semi-transparent) and opaque clouds (same
 masks, opacity 1: the stricter test), with S2 or S1 removed, and per real-cloud bin. Checks that
-coverage 0 reproduces eval_<split>/metrics.json exactly and that opaque clouds at 0% equal clean.
-Writes robustness.csv, summary.md and figures.
+coverage 0 reproduces eval_<split>/metrics.json exactly and that opaque clouds at 0% equal clean
+(both per run). Runs of one config with several training seeds (<name>_seed0, _seed1, ...) are
+grouped: summary tables and figures show mean ± std over training seeds (each run first averaged
+over its cloud seeds), with per-run tables kept; a single-seed config is reported as before.
+Writes robustness.csv (per run), robustness_by_model.csv (per config), summary.md and figures.
 
     python scripts/robustness_eval.py --runs /content/drive/MyDrive/floodfusion/runs \\
         --root /content/data/sen1floods11 --out /content/drive/MyDrive/floodfusion/results

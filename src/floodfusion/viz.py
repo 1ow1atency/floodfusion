@@ -277,7 +277,7 @@ def plot_training_curves(metrics_csv: str | Path, out_path: str | Path, title: s
 # A robust and a non-robust version of one family share the colour; the non-robust one is dashed
 # (lines) or hatched (bars). Aqua and yellow are below 3:1 contrast on white, so every figure also
 # has a legend and summary.md carries the numbers.
-FAMILY_ORDER = ("s1_only", "s2_only", "early_fusion", "fusion")
+FAMILY_ORDER = ("s1_only", "s2_only", "early_fusion", "fusion", "fusion_concat")
 CATEGORICAL = ("#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948")
 _INK, _INK_2, _GRID = "#0b0b0b", "#52514e", "#e6e5e1"
 
@@ -308,12 +308,14 @@ def _style_axes(ax):
 
 def plot_iou_vs_coverage(panels: Sequence[tuple[str, dict[str, list[tuple[float, float, float]]]]],
                          styles: dict[str, dict], out_path: str | Path, title: str,
-                         reference: dict[str, float] | None = None, reference_label: str = "S2\nremoved") -> Path:
+                         reference: dict[str, float] | None = None, reference_label: str = "S2\nremoved",
+                         names: dict[str, str] | None = None, band_label: str = "cloud seeds") -> Path:
     """Side-by-side panels with a shared y-axis, one per cloud setting (``panels`` = [(panel
-    title, {label: [(coverage, mean, std), ...]})]): one line per model, mean water IoU over
-    cloud seeds vs synthetic cloud coverage, with a +-1 std band. ``reference`` = {label: IoU}
-    is drawn in every panel as a point beyond 100% (the extreme: S2 removed altogether)."""
-    reference = reference or {}
+    title, {label: [(coverage, mean, std), ...]})]): one line per model, mean water IoU vs
+    synthetic cloud coverage, with a +-1 std band (``band_label``: what the std is over). ``names``
+    = {label: legend text}. ``reference`` = {label: IoU} is drawn in every panel as a point beyond
+    100% (the extreme: S2 removed altogether)."""
+    reference, names = reference or {}, names or {}
     fig, axes = plt.subplots(1, len(panels), figsize=(5.2 * len(panels) + 2.4, 5.0), sharey=True,
                              constrained_layout=True, squeeze=False)
     ref_x = 122
@@ -327,7 +329,8 @@ def plot_iou_vs_coverage(panels: Sequence[tuple[str, dict[str, list[tuple[float,
             x = np.array([p[0] for p in pts]) * 100
             mu, sd = np.array([p[1] for p in pts]), np.array([p[2] for p in pts])
             ax.fill_between(x, mu - sd, mu + sd, color=st["colour"], alpha=0.12, linewidth=0)
-            ax.plot(x, mu, color=st["colour"], linewidth=2, linestyle=ls, solid_capstyle="round", label=label)
+            ax.plot(x, mu, color=st["colour"], linewidth=2, linestyle=ls, solid_capstyle="round",
+                    label=names.get(label, label))
             ax.plot(x, mu, "o", color=st["colour"], markersize=6, markeredgecolor="white", markeredgewidth=1.5)
             if label in reference and x[-1] == 100:
                 ax.plot([100, ref_x], [mu[-1], reference[label]], color=st["colour"], linewidth=1, linestyle=":")
@@ -341,7 +344,7 @@ def plot_iou_vs_coverage(panels: Sequence[tuple[str, dict[str, list[tuple[float,
         ax.set_xticklabels([f"{v}%" for v in ticks] + ([reference_label] if reference else []))
         ax.set_xlabel("synthetic cloud coverage of S2", color=_INK)
         ax.set_title(panel_title, color=_INK, loc="left", fontsize=10.5)
-    axes[0][0].set_ylabel("water IoU (pooled), mean ± std over cloud seeds", color=_INK)
+    axes[0][0].set_ylabel(f"water IoU (pooled), mean ± std over\n{band_label}", color=_INK)
     fig.suptitle(title, color=_INK, x=0.01, ha="left")
     handles, labels = axes[0][0].get_legend_handles_labels()
     leg = fig.legend(handles, labels, loc="outside right center", frameon=False, fontsize=9, title_fontsize=8,
@@ -356,9 +359,12 @@ def plot_iou_vs_coverage(panels: Sequence[tuple[str, dict[str, list[tuple[float,
 
 
 def plot_real_cloud_bins(rows: Sequence[dict], labels: Sequence[str], styles: dict[str, dict],
-                         splits: Sequence[str], out_path: str | Path, note: str = "") -> Path:
+                         splits: Sequence[str], out_path: str | Path, note: str = "",
+                         names: dict[str, str] | None = None) -> Path:
     """Grouped bars: pooled water IoU per s2cloudless cloud bin and model, one panel per split.
-    Chip counts above each group; bins with too few chips are faded and marked."""
+    Chip counts above each group; bins with too few chips are faded and marked. ``rows`` need
+    model, split, setting, coverage (= bin), iou, n_chips, note; ``names`` = {label: legend text}."""
+    names = names or {}
     from .clouds import CLOUD_BIN_LABELS
 
     fig, axes = plt.subplots(1, len(splits), figsize=(6.4 * len(splits) + 2.2, 4.8), constrained_layout=True,
@@ -374,14 +380,14 @@ def plot_real_cloud_bins(rows: Sequence[dict], labels: Sequence[str], styles: di
             unreliable = 0 < n < 10 or any(r["note"].startswith("unreliable") for r in group)
             for mi, label in enumerate(labels):
                 r = next((r for r in group if r["model"] == label), None)
-                v = float(r["iou"]) if r and r["iou"] else np.nan
+                v = float(r["iou"]) if r and r["iou"] not in ("", None) else np.nan  # str (CSV) or float
                 if np.isnan(v):
                     continue
                 st = styles[label]
                 x = gi + (mi - (n_models - 1) / 2) * (width + 0.012)
                 ax.bar(x, v, width=width, color=st["colour"], alpha=0.35 if unreliable else 1.0,
                        hatch="///" if st["dashed"] else None, edgecolor="white", linewidth=0,
-                       label=label if gi == 0 else None)
+                       label=names.get(label, label) if gi == 0 else None)
             txt = f"n = {n}" + (" (unreliable)" if unreliable else "") if n else "no chips"
             ax.text(gi, 1.02, txt, ha="center", va="bottom", fontsize=8.5, color=_INK_2 if not unreliable else "#a33b1f")
         ax.set_xticks(range(len(CLOUD_BIN_LABELS))); ax.set_xticklabels(CLOUD_BIN_LABELS)

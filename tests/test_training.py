@@ -14,6 +14,7 @@ import torch
 import yaml
 
 from floodfusion.evaluation import evaluate
+from floodfusion.models import build_model
 from floodfusion.training import (
     check_splits, in_channels, load_checkpoint, load_config, resolve_config, run, stack_inputs,
 )
@@ -92,6 +93,27 @@ def test_robust_configs_differ_only_in_augment(robust, base):
     for c in (r, b):
         c.pop("name"), c.pop("augment")
     assert r == b  # identical seed, data, model and train settings
+
+
+def _flat(d: dict, prefix: tuple = ()) -> dict:
+    out = {}
+    for k, v in d.items():
+        out.update(_flat(v, prefix + (k,)) if isinstance(v, dict) else {prefix + (k,): v})
+    return out
+
+
+def test_concat_ablation_differs_from_fusion_robust_only_in_fusion():
+    # the ablation isolates cross-attention: same encoders, robustness training, data and schedule
+    raw = {n: load_config(REPO / "configs" / f"{n}.yaml") for n in ("fusion_concat_robust", "fusion_robust")}
+    res = {n: resolve_config(copy.deepcopy(c)) for n, c in raw.items()}
+    for cfgs in (raw, res):
+        a, b = _flat(cfgs["fusion_concat_robust"]), _flat(cfgs["fusion_robust"])
+        assert set(a) == set(b)
+        assert {k for k in a if a[k] != b[k]} == {("name",), ("model", "fusion")}
+        assert (a[("name",)], a[("model", "fusion")], b[("model", "fusion")]) == (
+            "fusion_concat_robust", "concat", "cross_attention")
+    model = build_model(res["fusion_concat_robust"], encoder_weights=None)
+    assert not any(isinstance(m, torch.nn.MultiheadAttention) for m in model.modules())
 
 
 @pytest.mark.parametrize("key, split", [("train_split", "bolivia"), ("train_split", "test"),

@@ -28,16 +28,16 @@ def quiet(*_a, **_k):
     pass
 
 
-def _dummy_run(base: dict, out: Path, name: str, modalities, arch="unet", robust=False) -> Path:
+def _dummy_run(base: dict, out: Path, name: str, modalities, arch="unet", robust=False, seed=0) -> Path:
     cfg = copy.deepcopy(base)
-    cfg["name"], cfg["data"]["modalities"] = name, list(modalities)
+    cfg["name"], cfg["data"]["modalities"], cfg["seed"] = name, list(modalities), seed
     cfg["model"]["arch"] = arch
     if robust:
         cfg["augment"]["synthetic_clouds"]["enabled"] = True
     cfg = resolve_config(cfg)
-    torch.manual_seed(len(name))
+    torch.manual_seed(len(name) + 100 * seed)
     model = build_model(cfg, encoder_weights=None)
-    run_dir = out / f"{name}_seed0"
+    run_dir = out / f"{name}_seed{seed}"
     run_dir.mkdir(parents=True)
     stats = json.loads(Path(cfg["data"]["stats"]).read_text())
     torch.save({"model": model.state_dict(), "epoch": 3, "best_val_iou": 0.5, "val_iou": 0.5, "config": cfg,
@@ -420,6 +420,129 @@ def test_refuses_smoke_checkpoints_and_other_splits(runs):
     assert rb.load_models([d], CPU, allow_smoke=True, log=quiet)[0].smoke
     with pytest.raises(ValueError, match="test.*bolivia"):
         rb.run_robustness([d], runs["root"], runs["tmp"] / "v", splits=["valid"], device=CPU, log=quiet)
+
+
+# ----------------------------------------------------------------------------- training seeds
+
+def _row(model, setting, cov, iou, seed="", note="", split="test", n=2):
+    return {"model": model, "split": split, "setting": setting, "coverage": cov, "cloud_seed": seed,
+            "iou": iou, "precision": "0.5", "recall": "0.25", "n_chips": n, "note": note}
+
+
+def _ap(v):  # CSV values have 6 decimals
+    return pytest.approx(v, abs=1e-6)
+
+
+def _em(label, config, seed, mods=("s1", "s2")):
+    return rb.EvalModel(label=label, run_dir=Path(label), cfg={"name": config, "seed": seed}, stats={}, mods=mods,
+                        family=config, robust=False, epoch=1, smoke=False)
+
+
+def test_aggregate_pools_cloud_seeds_then_training_seeds():
+    # run A: cloud seeds 0.5/0.6/0.7 (mean 0.6); run B: 0.7/0.8/0.9 (mean 0.8)
+    rows = []
+    for label, base, removed in (("m_seed0", 0.5, "0.4"), ("m_seed1", 0.7, "0.6")):
+        rows.append(_row(label, "thick_clouds", "0.0", "0.9"))
+        rows += [_row(label, "opaque_clouds", "1.0", f"{base + 0.1 * k:.6f}", seed=k) for k in rb.CLOUD_SEEDS]
+        rows.append(_row(label, "s2_removed", "", removed))
+    rows.append(_row("one", "thick_clouds", "0.0", "0.7"))
+    rows += [_row("one", "opaque_clouds", "1.0", v, seed=k) for k, v in zip(rb.CLOUD_SEEDS, ("0.1", "0.2", "0.6"))]
+    rows.append(_row("one", "s2_removed", "", "", note=rb.NOTE_NA_S2, n=0))
+    models = [_em("m_seed1", "m", 1), _em("m_seed0", "m", 0), _em("one", "one", 0)]
+    groups = rb.model_groups(models)
+    assert [(c, [m.label for m in runs]) for c, runs in groups] == [("m", ["m_seed0", "m_seed1"]), ("one", ["one"])]
+    agg = {(r["model"], r["setting"], r["coverage"]): r for r in rb.aggregate_rows(rows, groups)}
+    assert list(rb.aggregate_rows(rows, groups)[0]) == list(rb.AGG_COLUMNS)
+
+    r = agg[("m", "opaque_clouds", "1.0")]  # mean of run means; std over the 2 run means, not 6 values
+    assert (r["n_seeds"], r["train_seeds"], r["std_over"]) == (2, "0 1", rb.STD_TRAIN)
+    assert float(r["iou"]) == _ap(0.7) and float(r["iou_std"]) == _ap(np.std([0.6, 0.8], ddof=1))
+    assert float(r["precision"]) == _ap(0.5) and float(r["recall"]) == _ap(0.25)
+    r = agg[("m", "s2_removed", "")]  # one value per run: still a std over training seeds
+    assert float(r["iou"]) == _ap(0.5) and float(r["iou_std"]) == _ap(np.std([0.4, 0.6], ddof=1))
+
+    # one training seed: exactly the per-run sweep (std over cloud seeds); single values have std 0
+    got = rb.agg_sweep(list(agg.values()), "one", "test", "opaque_clouds")
+    want = rb.sweep_stats(rows, "one", "test", setting="opaque_clouds")
+    assert len(got) == len(want) == 1 and all(g == _ap(w) for g, w in zip(got[0], want[0]))
+    r = agg[("one", "opaque_clouds", "1.0")]
+    assert (r["n_seeds"], r["std_over"]) == (1, rb.STD_CLOUD)
+    assert float(r["iou_std"]) == _ap(np.std([0.1, 0.2, 0.6], ddof=1))
+    assert (agg[("one", "thick_clouds", "0.0")]["iou_std"], agg[("one", "thick_clouds", "0.0")]["std_over"]) == (0.0, "")
+    na = agg[("one", "s2_removed", "")]
+    assert math.isnan(na["iou"]) and math.isnan(na["iou_std"]) and (na["note"], na["n_chips"]) == (rb.NOTE_NA_S2, 0)
+    assert rb.agg_csv_row(na)["iou"] == "" and rb.agg_csv_row(r)["iou_std"] == f"{float(r['iou_std']):.6f}"
+
+    with pytest.raises(ValueError, match="m_seed1"):  # runs of one config must cover the same settings
+        rb.aggregate_rows([r for r in rows if not (r["model"] == "m_seed1" and r["setting"] == "s2_removed")], groups)
+
+
+def test_training_seeds_grouped_end_to_end(runs, synth_cfg, monkeypatch):
+    import floodfusion.viz as viz
+
+    out = runs["tmp"] / "runs_eval"
+    extra = _dummy_run(synth_cfg, out, "fusion_robust", ["s1", "s2"], arch="fusionnet", robust=True, seed=1)
+    seen = {}
+    real_cov, real_qual = viz.plot_iou_vs_coverage, viz.plot_qualitative
+
+    def spy_cov(panels, styles, out_path, **kw):
+        seen.setdefault("cov", []).append((panels, kw))
+        return real_cov(panels, styles, out_path, **kw)
+
+    def spy_qual(rows, out_path, **kw):
+        seen["qual"] = rows
+        return real_qual(rows, out_path, **kw)
+
+    monkeypatch.setattr(viz, "plot_iou_vs_coverage", spy_cov)
+    monkeypatch.setattr(viz, "plot_qualitative", spy_qual)
+    dirs = [*runs["dirs"].values(), extra]
+    res = rb.run_robustness(dirs, runs["root"], runs["tmp"] / "ms", cloud_csv=runs["cloud_csv"], device=CPU, log=quiet)
+    labels = [m.label for m in res["models"]]
+    assert labels == ["s1_only", "s2_only", "early_fusion", "fusion_robust_seed0", "fusion_robust_seed1"]
+
+    rows = rb.read_csv(runs["tmp"] / "ms" / "robustness.csv")  # per run, as before
+    agg = rb.read_csv(runs["tmp"] / "ms" / "robustness_by_model.csv")
+    assert agg == [{k: str(v) for k, v in rb.agg_csv_row(r).items()} for r in res["by_model"]]
+    assert sorted({r["model"] for r in agg}) == ["early_fusion", "fusion_robust", "s1_only", "s2_only"]
+    for split in rb.SPLITS:
+        per_run = [dict((c, mu) for c, mu, _ in rb.sweep_stats(rows, lab, split, setting="opaque_clouds"))[1.0]
+                   for lab in ("fusion_robust_seed0", "fusion_robust_seed1")]
+        assert per_run[0] != per_run[1]  # two different models
+        r = next(r for r in agg if r["model"] == "fusion_robust" and r["split"] == split
+                 and r["setting"] == "opaque_clouds" and r["coverage"] == "1.0")
+        assert (r["n_seeds"], r["train_seeds"], r["std_over"]) == ("2", "0 1", rb.STD_TRAIN)
+        assert float(r["iou"]) == pytest.approx(np.mean(per_run), abs=1e-6)
+        assert float(r["iou_std"]) == pytest.approx(np.std(per_run, ddof=1), abs=1e-6)
+        r = next(r for r in agg if r["model"] == "s2_only" and r["split"] == split
+                 and r["setting"] == "opaque_clouds" and r["coverage"] == "1.0")
+        assert (r["n_seeds"], r["std_over"]) == ("1", rb.STD_CLOUD)  # single seed: as before
+
+    md = (runs["tmp"] / "ms" / "summary.md").read_text()
+    assert "| fusion_robust | 2 |" in md and "| s2_only | 1 |" in md and "over training seeds" in md
+    assert "| fusion_robust_seed0 |" in md and "| fusion_robust_seed1 |" in md  # per-run tables kept
+    assert "Per run: opaque synthetic clouds" in md
+
+    # figures: one line per config; band = std over training seeds for the multi-seed model
+    panels, kw = seen["cov"][0]
+    assert set(panels[1][1]) == {"s1_only", "s2_only", "early_fusion", "fusion_robust"}
+    assert kw["names"]["fusion_robust"] == "fusion_robust (2 seeds)" and "training seeds" in kw["band_label"]
+    by_model = [r for r in res["by_model"] if r["split"] == "test"]
+    assert panels[1][1]["fusion_robust"] == rb.agg_sweep(by_model, "fusion_robust", "test", "opaque_clouds")
+    # qualitative: the lowest training seed of fusion_robust, named with its seed
+    assert {m for m, _, _ in seen["qual"][0]["preds"]} == {"fusion_robust (seed 0)"}
+
+
+def test_coverage_zero_check_stays_per_run(runs, synth_cfg):
+    out = runs["tmp"] / "runs_eval"
+    extra = _dummy_run(synth_cfg, out, "fusion_robust", ["s1", "s2"], arch="fusionnet", robust=True, seed=1)
+    path = extra / "eval_test" / "metrics.json"
+    ref = json.loads(path.read_text())
+    ref["metrics"]["tp"] += 1  # seed 1's stored evaluation no longer matches its best.pt
+    path.write_text(json.dumps(ref))
+    with pytest.raises(RuntimeError, match=r"(?s)SANITY CHECK FAILED on test.*fusion_robust_seed1") as e:
+        rb.run_robustness([*runs["dirs"].values(), extra], runs["root"], runs["tmp"] / "z",
+                          cloud_csv=runs["cloud_csv"], splits=["test"], device=CPU, figures=False, log=quiet)
+    assert "fusion_robust_seed0" not in str(e.value)
 
 
 def test_find_runs(tmp_path):
