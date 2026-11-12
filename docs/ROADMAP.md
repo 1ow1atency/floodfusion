@@ -97,18 +97,19 @@ epoch for information only and never used for selection.
 ## 5. Robustness evaluation
 - [ ] Synthetic cloud augmentation for S2
 - [ ] Modality dropout during training
-- [ ] Audit s2cloudless masks before using real-cloud bins. Local-sample audit done
-  ([cloud_audit.md](cloud_audit.md)); full-data run still TODO (`notebooks/05_cloud_audit.ipynb`).
-  - **Finding:** threshold 0.4 over-flags haze where the ground is visible. It does not
-    over-flag clear gaps (only a thin dilation rim).
-  - **Recommendation, provisional:** threshold 0.6. It agrees best with the annotators' -1 on
-    train chips (F1 80% vs 72%).
-  - **Labels under cloud:** cloudy pixels are mostly labelled -1, and almost no water is
-    labelled under cloud. The real-cloud bins therefore score the visible part of each chip,
-    not water under cloud.
-  - [ ] Run notebook 05 on the full data. Confirm 0.6 (F1 vs -1 on all train chips;
-    Paraguay_215904 / Paraguay_36146; test and Bolivia bin sizes), then decide whether to
-    regenerate `cloud_cover.csv`.
+- [x] Audit s2cloudless masks before using real-cloud bins: **done on the full data**
+  (notebook 05; findings and decisions in [cloud_audit.md](cloud_audit.md)).
+  - **Labels under cloud:** about half of the cloudy pixels are -1 and almost no water is
+    labelled under cloud (test 60-100% bin: 0.7% of cloudy pixels are water). The real-cloud
+    bins are **supporting evidence only**; the opaque synthetic sweep is the main experiment.
+  - **Threshold:** keep 0.4 for the reported bins (`cloud_cover.csv`, fractions unchanged);
+    `cloud_cover_t06.csv` holds the 0.6 fractions as a sensitivity check (full-data F1 vs -1:
+    58.4% at 0.4 vs 62.3% at 0.6, a smaller gain than the local sample suggested, and 0.6
+    shrinks the test 60-100% bin from 11 to 7 chips).
+  - **Unreliable masks:** on 10 chips (none in bolivia) s2cloudless saturates at ~1.0 over
+    plainly visible ground, driven by an elevated cirrus band B10; flagged
+    `mask_unreliable = 1` in `cloud_cover.csv`, and the robustness evaluation reports the
+    bins with and without them.
 - [ ] IoU vs cloud-cover curves for all models: thick (as trained) and opaque clouds, plus S2
   removed (`notebooks/04_evaluate.ipynb`). Run on the training-seed-0 models (results below);
   repeat once the runs in the run plan are done.

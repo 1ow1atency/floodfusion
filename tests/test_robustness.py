@@ -359,6 +359,45 @@ def test_real_cloud_binning():
     assert big["60-100%"]["n_chips"] == rb.MIN_BIN_CHIPS and not big["60-100%"]["unreliable"]
 
 
+def test_real_cloud_bins_reliable_only():
+    per = {c: {"tp": 1, "fp": 0, "fn": 0, "tn": 1} for c in ("a", "b", "c")}
+    cloud = [{"chip_id": "a", "split": "test", "cloud_fraction": 0.05, "mask_unreliable": False},
+             {"chip_id": "b", "split": "test", "cloud_fraction": 0.7, "mask_unreliable": True},
+             {"chip_id": "c", "split": "test", "cloud_fraction": 0.65}]  # no flag key: treated reliable
+    assert rb.flagged_chips(cloud, "test") == ["b"]
+    full = {x["bin"]: x["n_chips"] for x in rb.real_cloud_bins(per, cloud, "test")}
+    rel = {x["bin"]: x["n_chips"] for x in rb.real_cloud_bins(per, cloud, "test", reliable_only=True)}
+    assert (full["0-10%"], full["60-100%"]) == (1, 2)
+    assert (rel["0-10%"], rel["60-100%"]) == (1, 1)  # only the flagged chip is dropped
+    assert rel["no cloud fraction"] == 0  # excluded, not counted as missing
+
+
+def test_flagged_masks_reported_both_ways(runs):
+    import csv as _csv
+
+    rows = rb.read_csv(runs["cloud_csv"])  # strings; add the flag column for the binned test chip
+    for r in rows:
+        r["mask_unreliable"] = 1 if r["chip_id"] == "Te_0" else 0
+    with open(runs["cloud_csv"], "w", newline="") as f:
+        w = _csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader(); w.writerows(rows)
+    res = _run(runs, runs["tmp"] / "fl", splits=["test"], figures=False)
+    out = rb.read_csv(runs["tmp"] / "fl" / "robustness.csv")
+    for lab in ("s1_only", "fusion_robust"):
+        full = {r["coverage"]: r for r in out if r["model"] == lab and r["setting"] == "real_clouds"}
+        rel = {r["coverage"]: r for r in out if r["model"] == lab and r["setting"] == "real_clouds_reliable"}
+        assert set(rel) == set(full) == set(rb.CLOUD_BIN_LABELS)
+        assert (full["0-10%"]["n_chips"], rel["0-10%"]["n_chips"]) == ("1", "0")  # Te_0 excluded
+    agg = {(r["model"], r["setting"], r["coverage"]): r for r in res["by_model"]}
+    assert agg[("fusion_robust", "real_clouds_reliable", "0-10%")]["n_chips"] == 0
+    md = (runs["tmp"] / "fl" / "summary.md").read_text()
+    assert "mask_unreliable" in md and "Te_0" in md and "excluding the 1 chip(s)" in md
+    # without flags (bolivia untouched fixture) there is no second table
+    res2 = _run(runs, runs["tmp"] / "fl2", splits=["bolivia"], figures=False)
+    assert not any(r["setting"] == "real_clouds_reliable" for r in res2["rows"])
+    assert "excluding" not in (runs["tmp"] / "fl2" / "summary.md").read_text()
+
+
 def test_qualitative_chip_rule(runs):
     ids = Sen1Floods11(runs["root"], "test", modalities=("s1",)).ids
     from floodfusion.clouds import read_cloud_csv

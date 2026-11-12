@@ -9,8 +9,9 @@ import numpy as np
 import pytest
 
 from floodfusion.cloud_audit import (
-    LABEL_KEYS, bin_counts_at, chip_audit, label_counts, label_shares, masks_at, nodata_agreement,
-    pick_audit_chips, pooled_labels, read_rows, summary_markdown, write_rows,
+    LABEL_KEYS, UNRELIABLE_HIGH_T, UNRELIABLE_MIN_CLOUD, UNRELIABLE_MIN_DIM, bin_counts_at, chip_audit,
+    cloud_cover_rows, label_counts, label_shares, mask_unreliable, masks_at, nodata_agreement,
+    pick_audit_chips, pooled_labels, read_rows, summary_markdown, unreliable_chips, write_rows,
 )
 
 
@@ -121,3 +122,54 @@ def test_pick_chips_bins_and_csv_roundtrip(tmp_path):
     assert math.isnan(back[7]["t0.4_cloud_fraction"])
     md = summary_markdown(back, (0.4,), reference={"t1": 0.99})
     assert "Label check at threshold 0.4" in md and "max abs difference 0.00e+00" in md and "F1" in md
+
+
+# --- unreliable-mask rule (saturated s2cloudless probability over visible ground) -------------
+
+def _audit_row(cid="X", split="train", cf4=1.0, cf6=1.0, dim=0.5):
+    r = {"chip_id": cid, "split": split, "valid_s2_fraction": 1.0}
+    for t, cf in (("0.4", cf4), ("0.5", (cf4 + cf6) / 2 if not math.isnan(cf4) else cf4), ("0.6", cf6)):
+        r[f"t{t}_cloud_fraction"] = cf
+        r[f"t{t}_mask_lowprob"] = 0.0
+        r[f"t{t}_mask_dim"] = dim
+        for a in ("cloudy", "clear"):
+            for b in LABEL_KEYS:
+                r[f"t{t}_{a}_{b}"] = 10
+    return r
+
+
+def test_mask_unreliable_rule():
+    assert mask_unreliable(_audit_row())
+    assert mask_unreliable(_audit_row(cf6=UNRELIABLE_MIN_CLOUD, dim=UNRELIABLE_MIN_DIM))  # at the cutoffs
+    assert not mask_unreliable(_audit_row(cf6=UNRELIABLE_MIN_CLOUD - 0.02))  # structure appears at 0.6
+    assert not mask_unreliable(_audit_row(dim=UNRELIABLE_MIN_DIM - 0.02))    # all bright cloud: overcast
+    assert not mask_unreliable(_audit_row(cf4=math.nan, cf6=math.nan, dim=math.nan))  # no valid S2
+    with pytest.raises(ValueError, match="0.7"):
+        mask_unreliable(_audit_row(), high_t=0.7)
+
+
+def test_unreliable_chips_and_cloud_cover_rows():
+    rows = [_audit_row("b", "test"), _audit_row("a", "test"), _audit_row("c", "train"),
+            _audit_row("d", "train", dim=0.0), _audit_row("e", "bolivia", cf4=0.25, cf6=0.12)]
+    assert [(r["split"], r["chip_id"]) for r in unreliable_chips(rows)] == [
+        ("train", "c"), ("test", "a"), ("test", "b")]  # split order, then id; d (overcast) and e not flagged
+
+    cc = cloud_cover_rows(rows, 0.6)
+    assert [r["chip_id"] for r in cc] == list("bacde")
+    assert [r["cloud_fraction"] for r in cc] == [1.0, 1.0, 1.0, 1.0, 0.12]
+    assert [r["mask_unreliable"] for r in cc] == [True, True, True, False, False]
+    assert cc[0]["split"] == "test" and cc[0]["valid_s2_fraction"] == 1.0
+    # the flag never depends on the exported threshold
+    assert [r["mask_unreliable"] for r in cloud_cover_rows(rows, 0.4)] == [r["mask_unreliable"] for r in cc]
+
+
+def test_summary_lists_unreliable_masks():
+    rows = [_audit_row("Para_1", "train"), _audit_row("Over_1", "train", dim=0.0),
+            _audit_row("ok", "test", cf4=0.2, cf6=0.1)]
+    md = summary_markdown(rows, thresholds=(0.4, 0.5, 0.6))
+    assert "## Unreliable masks" in md and "mask_unreliable = 1" in md
+    i = md.index("## Unreliable masks")
+    flagged_block = md[i:md.index("##", i + 2)]
+    assert "Para_1" in flagged_block and "Over_1" not in flagged_block and "ok" not in flagged_block
+    md2 = summary_markdown([_audit_row("Over_1", "train", dim=0.0)], thresholds=(0.4, 0.5, 0.6))
+    assert "## Unreliable masks" not in md2  # nothing flagged: no section

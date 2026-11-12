@@ -17,6 +17,9 @@ Settings, per split (test, bolivia):
   * s2_removed / s1_removed: the modality is missing. FusionNet: zero input + modality mask;
     U-Net: that modality's channels set to 0 after normalisation (= train band mean).
   * real_clouds: the clean predictions pooled per s2cloudless cloud-cover bin (docs/cloud_cover.csv).
+    Chips with mask_unreliable = 1 there (s2cloudless saturated over visible ground, see
+    docs/cloud_audit.md) stay in these bins; real_clouds_reliable repeats the bins without them
+    (only present when the split has flagged chips).
 
 Training seeds: runs of one config (``<name>_seed0``, ``_seed1``, ...) are evaluated as separate
 runs (robustness.csv, one row per run; the sanity checks are per run) and grouped by config name
@@ -84,8 +87,10 @@ NOTE_UNRELIABLE = f"unreliable: fewer than {MIN_BIN_CHIPS} chips"
 NOTE_ZERO_THICK = "coverage 0 = clean (real S2 as acquired)"
 NOTE_ZERO_OPAQUE = "coverage 0 through the opaque path: checked equal to clean"
 OPAQUE_DROP_MAX = 0.5  # s2-only models at 100% opaque cloud are expected below this fraction of their clean IoU
-AUDIT_NOTE = ("Real-cloud bins use s2cloudless masks; the mask audit (docs/ROADMAP.md, Stage 5 TODO) is "
-              "still pending, so treat these bins as indicative.")
+AUDIT_NOTE = ("Real-cloud bins use s2cloudless masks at threshold 0.4. Per the mask audit "
+              "(docs/cloud_audit.md), water under real cloud is mostly unlabelled (-1), so these bins score "
+              "the visible part of each chip: supporting evidence only; the opaque synthetic sweep is the "
+              "main experiment.")
 
 
 # ----------------------------------------------------------------------------- clouds
@@ -367,13 +372,23 @@ def opaque_drop(models: Sequence[EvalModel], rows: list[dict], split: str) -> tu
     return lines, warnings
 
 
-def real_cloud_bins(per_chip: dict[str, dict], cloud_rows: Iterable[dict], split: str) -> list[dict]:
+def flagged_chips(cloud_rows: Iterable[dict], split: str) -> list[str]:
+    """Chips of ``split`` whose cloud mask is flagged unreliable in cloud_cover.csv, sorted."""
+    return sorted(r["chip_id"] for r in cloud_rows if r["split"] == split and r.get("mask_unreliable"))
+
+
+def real_cloud_bins(per_chip: dict[str, dict], cloud_rows: Iterable[dict], split: str,
+                    reliable_only: bool = False) -> list[dict]:
     """Pooled metrics per s2cloudless cloud bin from per-chip counts ({chip: {tp, fp, fn, tn,
-    ...}}). Chips without a cloud fraction (no valid S2) are left out and counted."""
+    ...}}). Chips without a cloud fraction (no valid S2) are left out and counted.
+    ``reliable_only``: chips flagged mask_unreliable are left out of every bin."""
+    skip = set(flagged_chips(cloud_rows, split)) if reliable_only else set()
     frac = {r["chip_id"]: r["cloud_fraction"] for r in cloud_rows if r["split"] == split}
     bins: dict[str, list[str]] = {b: [] for b in CLOUD_BIN_LABELS}
     unbinned = []
     for cid in per_chip:
+        if cid in skip:
+            continue
         b = cloud_bin(frac[cid]) if cid in frac else None
         (bins[b] if b else unbinned).append(cid)
     out = []
@@ -432,9 +447,15 @@ def build_rows(models: Sequence[EvalModel], split: str, confs: dict, n_chips: in
                 add(m, setting, cov, seed, clean, note=st)
             else:
                 add(m, setting, cov, seed, None, n=0, note=st)
-        for b in real_cloud_bins(confs[(m.label, "clean", 0.0, None)].per_chip(), cloud_rows, split):
+        per_chip = confs[(m.label, "clean", 0.0, None)].per_chip()
+        for b in real_cloud_bins(per_chip, cloud_rows, split):
             if b["bin"] in CLOUD_BIN_LABELS:
                 add(m, "real_clouds", b["bin"], None, b if b["n_chips"] else None, n=b["n_chips"], note=b["note"])
+        if flagged_chips(cloud_rows, split):  # same bins without the flagged chips
+            for b in real_cloud_bins(per_chip, cloud_rows, split, reliable_only=True):
+                if b["bin"] in CLOUD_BIN_LABELS:
+                    add(m, "real_clouds_reliable", b["bin"], None, b if b["n_chips"] else None,
+                        n=b["n_chips"], note=b["note"])
     return rows
 
 
@@ -573,8 +594,23 @@ def _sweep_table(rows, labels, split, setting) -> list[str]:
     return L
 
 
+def _real_cloud_table(agg, groups, split, setting="real_clouds") -> list[str]:
+    L = ["| model | seeds | " + " | ".join(CLOUD_BIN_LABELS) + " |", "|---|--:|" + "--:|" * len(CLOUD_BIN_LABELS)]
+    for config, runs in groups:
+        cells = []
+        for b in CLOUD_BIN_LABELS:
+            r = _agg(agg, config, split, setting, b)
+            sd = f" ± {_num(r['iou_std']):.4f}" if len(runs) > 1 else ""
+            cells.append("– (0)" if not int(r["n_chips"]) else
+                         f"{_num(r['iou']):.4f}{sd} ({r['n_chips']}){' ⚠' if r['note'].startswith('unreliable') else ''}")
+        L.append(f"| {config} | {len(runs)} | " + " | ".join(cells) + " |")
+    return L
+
+
 def summary_markdown(rows: list[dict], models: Sequence[EvalModel], splits: Sequence[str],
-                     unbinned: dict[str, int], cache_note: str = "", warnings: Sequence[str] = ()) -> str:
+                     unbinned: dict[str, int], cache_note: str = "", warnings: Sequence[str] = (),
+                     flagged: dict[str, Sequence[str]] | None = None) -> str:
+    flagged = flagged or {}
     groups = model_groups(models)
     agg = aggregate_rows(rows, groups)
     multi = any(len(runs) > 1 for _, runs in groups)
@@ -647,18 +683,16 @@ def summary_markdown(rows: list[dict], models: Sequence[EvalModel], splits: Sequ
                     sd = f" ± {_num(r['iou_std']):.4f}" if k > 1 else ""
                     cells.append(f"{_num(r['iou']):.4f}{sd} {pr(r)}{mark}")
             L.append(f"| {config} | {k} | " + " | ".join(cells) + " |")
-        L += ["", "### Real clouds (s2cloudless bins): water IoU (chips)", "",
-              "| model | seeds | " + " | ".join(CLOUD_BIN_LABELS) + " |", "|---|--:|" + "--:|" * len(CLOUD_BIN_LABELS)]
-        for config, runs in groups:
-            cells = []
-            for b in CLOUD_BIN_LABELS:
-                r = _agg(agg, config, split, "real_clouds", b)
-                sd = f" ± {_num(r['iou_std']):.4f}" if len(runs) > 1 else ""
-                cells.append("– (0)" if not int(r["n_chips"]) else
-                             f"{_num(r['iou']):.4f}{sd} ({r['n_chips']}){' ⚠' if r['note'].startswith('unreliable') else ''}")
-            L.append(f"| {config} | {len(runs)} | " + " | ".join(cells) + " |")
+        L += ["", "### Real clouds (s2cloudless bins): water IoU (chips)", ""]
+        L += _real_cloud_table(agg, groups, split)
         L += ["", f"⚠ = {NOTE_UNRELIABLE}. Chips without a cloud fraction (no valid S2): {unbinned.get(split, 0)}.",
               f"_{AUDIT_NOTE}_", ""]
+        if flagged.get(split):
+            names = ", ".join(flagged[split])
+            L += [f"#### Same bins, excluding the {len(flagged[split])} chip(s) flagged mask_unreliable "
+                  f"in cloud_cover.csv ({names})", ""]
+            L += _real_cloud_table(agg, groups, split, "real_clouds_reliable")
+            L += [""]
         if multi:
             labels = [m.label for _, runs in groups for m in runs]
             L += ["### Per run: opaque synthetic clouds, water IoU (± over cloud seeds)", ""]
@@ -734,12 +768,17 @@ def _run_robustness(run_dirs, root, out_dir, *, cloud_csv, splits, batch_size, n
                                                                      cloud_rows, split) if b["bin"] == "no cloud fraction")
         all_preds[split] = preds
     csv_path = write_csv(rows, out_dir / "robustness.csv")
+    flagged = {s: flagged_chips(cloud_rows, s) for s in splits}
+    for s_, ids_ in flagged.items():
+        if ids_:
+            log(f"  {s_}: {len(ids_)} chip(s) flagged mask_unreliable, real-cloud bins also reported without them: "
+                + ", ".join(ids_))
     groups = model_groups(models)
     agg = aggregate_rows(rows, groups)
     agg_path = write_agg_csv(agg, out_dir / "robustness_by_model.csv")
     for config, runs in groups:
         log(f"  {config}: {len(runs)} training seed(s) {[m.seed for m in runs]}")
-    md = summary_markdown(rows, models, splits, unbinned, warnings=warnings,
+    md = summary_markdown(rows, models, splits, unbinned, warnings=warnings, flagged=flagged,
                           cache_note=f"Clouds generated in this run (main process): {cache.generated}.")
     (out_dir / "summary.md").write_text(md + "\n")
     written = {"csv": csv_path, "by_model": agg_path, "summary": out_dir / "summary.md"}

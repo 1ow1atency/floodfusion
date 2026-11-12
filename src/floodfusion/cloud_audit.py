@@ -36,6 +36,19 @@ MID_CLOUD = 0.45  # "mid-cloud" figure chips: train chips closest to this cloud 
 LABEL_KEYS = ("nodata", "land", "water")  # label -1, 0, 1
 EVAL_SPLITS = ("test", "bolivia")
 _VIS = [S2_BANDS.index(b) for b in ("B2", "B3", "B4")]
+# "Cloud mask unreliable" rule (docs/cloud_audit.md). On some chips the cirrus band B10 is
+# elevated over the whole chip (a high thin-cirrus veil, or a B10 artefact) and s2cloudless
+# saturates near probability 1 everywhere, although the ground is plainly visible in the other
+# bands. Signature, computable from the audit columns alone:
+#   * near-uniform saturation that survives raising the threshold:
+#     cloud fraction >= UNRELIABLE_MIN_CLOUD at threshold UNRELIABLE_HIGH_T;
+#   * visible ground inside the mask: dim share >= UNRELIABLE_MIN_DIM at the base threshold
+#     (dim = mean B2-B4 TOA < DIM_REFLECTANCE: dark ground, not a bright cloud top).
+# Cutoffs sit between the visually checked chips: every false mask has cloud >= 0.945 at 0.6
+# and dim >= 0.14; every genuine one has cloud < 0.92 at 0.6 or dim <= 0.05.
+UNRELIABLE_HIGH_T = 0.6
+UNRELIABLE_MIN_CLOUD = 0.94
+UNRELIABLE_MIN_DIM = 0.10
 
 
 # ----------------------------------------------------------------------------- per chip
@@ -151,6 +164,35 @@ def nodata_agreement(rows: Iterable[dict], t: float, split: str = "train") -> di
     return {"precision": prec, "recall": rec, "f1": f1, "chips": acc["chips"]}
 
 
+def mask_unreliable(row: dict, base_t: float = CLOUD_THRESHOLD, high_t: float = UNRELIABLE_HIGH_T) -> bool:
+    """True if the chip's s2cloudless mask is unreliable (rule above): saturated probability
+    over visible ground. ``row`` is a chip_audit row with thresholds ``base_t`` and ``high_t``."""
+    for t in (base_t, high_t):
+        if f"t{t:g}_cloud_fraction" not in row:
+            raise ValueError(f"audit row has no threshold {t:g} (chip {row.get('chip_id')})")
+    cloud, dim = row[f"t{high_t:g}_cloud_fraction"], row[f"t{base_t:g}_mask_dim"]
+    if math.isnan(cloud) or math.isnan(dim):
+        return False
+    return cloud >= UNRELIABLE_MIN_CLOUD and dim >= UNRELIABLE_MIN_DIM
+
+
+def unreliable_chips(rows: Iterable[dict], base_t: float = CLOUD_THRESHOLD,
+                     high_t: float = UNRELIABLE_HIGH_T) -> list[dict]:
+    """The audit rows whose mask is unreliable, in split order then by chip id."""
+    out = [r for r in rows if mask_unreliable(r, base_t, high_t)]
+    return sorted(out, key=lambda r: (SPLITS.index(r["split"]), r["chip_id"]))
+
+
+def cloud_cover_rows(rows: Iterable[dict], t: float = CLOUD_THRESHOLD, *,
+                     flag_base_t: float = CLOUD_THRESHOLD) -> list[dict]:
+    """chip_audit rows as cloud_cover.csv rows (floodfusion.clouds.write_cloud_csv): the cloud
+    fraction at threshold ``t``, plus the mask_unreliable flag (always computed at
+    ``flag_base_t``/UNRELIABLE_HIGH_T, so the flag does not change with ``t``)."""
+    return [{"chip_id": r["chip_id"], "split": r["split"], "cloud_fraction": r[f"t{t:g}_cloud_fraction"],
+             "valid_s2_fraction": r["valid_s2_fraction"], "mask_unreliable": mask_unreliable(r, flag_base_t)}
+            for r in rows]
+
+
 def bin_of(row: dict, t: float) -> str | None:
     return cloud_bin(row[f"t{t:g}_cloud_fraction"])
 
@@ -245,6 +287,20 @@ def summary_markdown(rows: Sequence[dict], thresholds: Sequence[float] = THRESHO
         if diffs:
             L += [f"Check: at {CLOUD_THRESHOLD:g} the cloud fraction matches cloud_cover.csv for {len(diffs)} chips "
                   f"(max abs difference {max(diffs):.2e}).", ""]
+    flagged = unreliable_chips(rows) if all(f"t{t:g}_cloud_fraction" in (rows[0] if rows else {})
+                                            for t in (CLOUD_THRESHOLD, UNRELIABLE_HIGH_T)) else []
+    if flagged:
+        L += ["## Unreliable masks (saturated probability over visible ground)", "",
+              f"Rule: cloud fraction ≥ {UNRELIABLE_MIN_CLOUD:g} at threshold {UNRELIABLE_HIGH_T:g} and dim share "
+              f"≥ {UNRELIABLE_MIN_DIM:.0%} at {CLOUD_THRESHOLD:g} (see floodfusion.cloud_audit). "
+              "These chips get mask_unreliable = 1 in docs/cloud_cover.csv.", ""]
+        L += [f"| chip | split | cloud at {CLOUD_THRESHOLD:g} | cloud at {UNRELIABLE_HIGH_T:g} "
+              f"| dim at {CLOUD_THRESHOLD:g} |", "|---|---|--:|--:|--:|"]
+        for r in flagged:
+            L.append(f"| {r['chip_id']} | {r['split']} | {_pct(r[f't{CLOUD_THRESHOLD:g}_cloud_fraction'])} "
+                     f"| {_pct(r[f't{UNRELIABLE_HIGH_T:g}_cloud_fraction'])} "
+                     f"| {_pct(r[f't{CLOUD_THRESHOLD:g}_mask_dim'])} |")
+        L.append("")
     for t in thresholds:
         L += [f"## Label check at threshold {t:g}", "",
               "Pooled over valid S2 pixels. 'scored px under cloud' = share of the labelled (0/1) pixels, the ones "

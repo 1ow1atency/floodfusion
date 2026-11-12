@@ -116,6 +116,17 @@ def test_csv_roundtrip(tmp_path: Path):
     assert math.isnan(back[3]["cloud_fraction"]) and back[1]["cloud_fraction"] == pytest.approx(0.95)
 
 
+def test_csv_flag_column_roundtrip(tmp_path: Path):
+    rows = _rows()
+    rows[1]["mask_unreliable"] = True
+    path = write_cloud_csv(rows, tmp_path / "cc.csv")
+    assert path.read_text().splitlines()[0] == ",".join(CSV_COLUMNS) + ",mask_unreliable"
+    assert [r["mask_unreliable"] for r in read_cloud_csv(path)] == [False, True, False, False, False]
+    plain = write_cloud_csv(_rows(), tmp_path / "plain.csv")  # no flags given: column left out
+    assert "mask_unreliable" not in plain.read_text().splitlines()[0]
+    assert all(r["mask_unreliable"] is False for r in read_cloud_csv(plain))  # old files: default False
+
+
 def test_pick_examples():
     ex = pick_examples(_rows(), "train", n_cloudy=2, n_clear=2)
     assert [r["chip_id"] for r in ex] == ["b", "c", "a"]   # no chip repeated, NaN never picked

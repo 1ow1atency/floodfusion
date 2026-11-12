@@ -35,6 +35,8 @@ CLOUD_THRESHOLD = 0.4
 AVERAGE_OVER = 4
 DILATION_SIZE = 2
 CSV_COLUMNS = ("chip_id", "split", "cloud_fraction", "valid_s2_fraction")
+FLAG_COLUMN = "mask_unreliable"  # optional 5th column: 1 = saturated s2cloudless probability over
+                                 # visible ground (rule: floodfusion.cloud_audit.mask_unreliable)
 # Cloud bins for evaluation: [0, 0.1), [0.1, 0.3), [0.3, 0.6), [0.6, 1.0].
 CLOUD_BIN_EDGES: tuple[float, ...] = (0.0, 0.1, 0.3, 0.6, 1.0)
 CLOUD_BIN_LABELS: tuple[str, ...] = ("0-10%", "10-30%", "30-60%", "60-100%")
@@ -107,13 +109,18 @@ def compute_cloud_cover(root: str | Path, *, detector: CloudDetector | None = No
 def write_cloud_csv(rows: Iterable[dict], path: str | Path) -> Path:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    rows = list(rows)
+    flags = any(FLAG_COLUMN in r for r in rows)  # written only if provided (back-compatible)
     with open(path, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(CSV_COLUMNS)
+        w.writerow(CSV_COLUMNS + ((FLAG_COLUMN,) if flags else ()))
         for r in rows:
             cf = r["cloud_fraction"]
-            w.writerow([r["chip_id"], r["split"], "" if math.isnan(cf) else f"{cf:.6f}",
-                        f"{r['valid_s2_fraction']:.6f}"])
+            out = [r["chip_id"], r["split"], "" if math.isnan(cf) else f"{cf:.6f}",
+                   f"{r['valid_s2_fraction']:.6f}"]
+            if flags:
+                out.append(int(bool(r.get(FLAG_COLUMN))))
+            w.writerow(out)
     return path
 
 
@@ -121,7 +128,9 @@ def read_cloud_csv(path: str | Path) -> list[dict]:
     with open(path, newline="") as f:
         return [{"chip_id": r["chip_id"], "split": r["split"],
                  "cloud_fraction": float(r["cloud_fraction"]) if r["cloud_fraction"] else math.nan,
-                 "valid_s2_fraction": float(r["valid_s2_fraction"])} for r in csv.DictReader(f)]
+                 "valid_s2_fraction": float(r["valid_s2_fraction"]),
+                 FLAG_COLUMN: r.get(FLAG_COLUMN, "") in ("1", "True", "true")}
+                for r in csv.DictReader(f)]
 
 
 def cloud_bin(fraction: float) -> str | None:
