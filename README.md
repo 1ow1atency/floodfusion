@@ -1,97 +1,102 @@
 # floodfusion
 
-Cloud-robust flood mapping by fusing Sentinel-1 SAR and Sentinel-2 optical imagery with deep learning (Sen1Floods11).
+Cloud-robust flood mapping by fusing Sentinel-1 SAR and Sentinel-2 optical imagery with deep
+learning (Sen1Floods11).
 
-> **Interim README.** This project is in progress. The results below are preliminary.
+> **Interim README.** Work in progress: every result so far is from a single training seed.
+> Multi-seed runs are underway; final results will replace the tables below.
 
-Optical satellite images (Sentinel-2) show flood water clearly, but they are often blocked by
-clouds, and clouds are especially common during floods. Radar (Sentinel-1 SAR) sees through clouds,
-but water is harder to tell apart from other surfaces in radar. This project fuses both
-modalities in deep segmentation models and asks: **does fusing SAR with optical imagery keep
-flood segmentation accurate (1) when the optical image is covered by clouds, and (2) when the
-model is tested on a region it never saw in training?** The second question uses the held-out
-Bolivia split of Sen1Floods11, which is used for evaluation only.
+## What this project is
+
+Floods are mapped from satellites, but ordinary (optical) satellite photos cannot see through
+clouds — and floods happen in exactly the cloudy, rainy weather that hides them. Radar
+satellites (Sentinel-1 SAR) see through clouds day and night, but their images are grainier
+and harder to read, so flood maps from radar alone are less accurate. This project trains a
+deep learning model that reads both images of the same place at once: each image type gets
+its own encoder (feature extractor), and the two exchange information through cross-attention
+(each side learns what to take from the other) before a flood map is produced. The aim is a
+model as accurate as an optical one in clear sky that keeps working as clouds cover the
+scene. It is trained and tested on the public Sen1Floods11 dataset — 446 hand-labelled
+satellite scenes from 11 real flood events across six continents — and one flood (Bolivia)
+is held out entirely: the model is evaluated there but never trained or tuned on it. Cloud
+robustness is measured by covering the optical image with computer-generated (synthetic)
+clouds of growing coverage at test time, so the same scene can be scored from 0% to 100%
+cloud.
+
+```mermaid
+flowchart LR
+    O["optical image<br/>Sentinel-2, 13 bands"] --> EO["optical<br/>encoder"]
+    R["radar image<br/>Sentinel-1 SAR, 2 bands"] --> ER["radar<br/>encoder"]
+    EO --> F["fusion<br/>(cross-attention)"]
+    ER --> F
+    F --> D["decoder"] --> M["flood map<br/>water / not water"]
+```
+
+## Key result (training seed 0, preliminary)
+
+**Under fully opaque synthetic clouds on the test split, the robust two-encoder model
+(`fusion_robust`) is the most accurate of all seven models at every coverage from 20% to 80%,
+and at 100% cloud it is level with radar-only — while the optical-only model collapses.**
+
+*(figure pending: copy `results/iou_vs_coverage_test.png` from Drive into
+`docs/figures/iou_vs_coverage_test.png` — the line below will then render)*
+
+![Water IoU vs synthetic cloud coverage, test split](docs/figures/iou_vs_coverage_test.png)
+
+Water IoU (intersection-over-union of the water class) on the 90 test chips under **opaque**
+synthetic clouds, averaged over 3 cloud layouts. **Training seed 0 — preliminary** (source:
+[docs/results/](docs/results/)):
+
+| model | clear sky | 40% cloud | 80% cloud | 100% cloud |
+|---|--:|--:|--:|--:|
+| s1_only (radar only) | 0.657 | 0.657 | 0.657 | 0.657 |
+| s2_only_robust (optical only) | 0.821 | 0.526 | 0.215 | 0.064 |
+| early_fusion_robust (channels stacked) | 0.819 | 0.730 | 0.616 | 0.530 |
+| **fusion_robust (two encoders + cross-attention)** | 0.813 | **0.750** | **0.687** | 0.650 |
+
+The fusion model pays almost nothing in clear sky (0.813 vs 0.821 optical-only) and keeps
+most of its accuracy as the optical image disappears.
+
+## Why opaque clouds, not the training clouds
+
+The synthetic clouds used in training are semi-transparent: inside the cloud the image keeps
+about 20% of the ground signal, and a water index computed under them still separates water
+from land almost as well as in clear sky (measured in
+[docs/cloud_leakage.md](docs/cloud_leakage.md)). A model can therefore learn to see water
+*through* them: the optical-only robust model scores 0.79 under 100% of these clouds, but
+0.06 once the same clouds are made fully opaque. Thick-cloud results overstate optical
+robustness, so the headline evaluation uses **opaque** clouds — the same cloud shapes with
+opacity 1, leaving no ground signal — and reports the thick results alongside.
 
 ## Status
 
-- **Done:** data pipeline, normalisation statistics (train split only) and cloud cover of
-  every chip.
-- **Done:** U-Net baselines (SAR-only, optical-only, early fusion), trained.
-- **Done:** FusionNet, trained without cloud or dropout training. It has two encoders (one per
-  modality) with cross-attention fusion.
-- **Done:** robustness training (synthetic clouds on Sentinel-2, modality dropout) for early
-  fusion and FusionNet.
-- **Done (training seed 0):** robustness evaluation on test and Bolivia (synthetic cloud cover,
-  thick and opaque; missing modality; real-cloud bins). Results are in `docs/results/`, with a
-  summary below.
-- **Next:** more training seeds (1-2) for `s1_only`, `fusion_robust` and `early_fusion_robust`,
-  and a concat-fusion ablation (`fusion_concat_robust`, seeds 0-2). The order and rough T4 times
-  are in the run plan in [docs/ROADMAP.md](docs/ROADMAP.md).
+- **Done:** data pipeline and normalisation; U-Net baselines (radar-only, optical-only, early
+  fusion); FusionNet (two encoders + cross-attention); robustness training (synthetic clouds
+  + modality dropout); robustness evaluation on test and Bolivia (seed 0, in
+  [docs/results/](docs/results/)); full-data audit of the s2cloudless cloud masks
+  ([docs/cloud_audit.md](docs/cloud_audit.md)).
+- **In progress:** training seeds 1–2 for the main models and a concat-fusion ablation
+  (`fusion_concat_robust`, seeds 0–2) — run plan and rough GPU times in
+  [docs/ROADMAP.md](docs/ROADMAP.md); then final multi-seed results, and a small demo that
+  runs a trained model on a chosen scene.
 
-## Preliminary results
+## Limitations
 
-**Preliminary: single training seed (0).** These numbers are not final, because there is no
-repeat over training seeds yet. The table is for real data only; cloud robustness follows below.
-
-- `best.pt` was selected on the valid split and evaluated on full 512×512 chips.
-- Sentinel-2 is used as acquired, with no synthetic clouds.
-- Metric: IoU of the water class, with no-data pixels (label `-1`) ignored.
-- Source: [docs/ROADMAP.md](docs/ROADMAP.md).
-
-| model               | valid IoU | test IoU | bolivia IoU | test precision | test recall |
-|---------------------|----------:|---------:|------------:|---------------:|------------:|
-| s1_only             |    0.6612 |   0.6567 |      0.6253 |         0.8168 |      0.7702 |
-| s2_only             |    0.8297 |   0.8276 |      0.7908 |         0.9269 |      0.8854 |
-| early_fusion        |    0.8379 |   0.8202 |      0.7922 |         0.9339 |      0.8707 |
-| fusion              |    0.8375 |   0.8181 |      0.7971 |         0.9229 |      0.8781 |
-| early_fusion_robust |    0.8271 |   0.8190 |      0.7818 |         0.9132 |      0.8881 |
-| fusion_robust       |    0.8181 |   0.8130 |      0.7916 |         0.9159 |      0.8786 |
-
-`fusion` is FusionNet without cloud or dropout training (`best.pt` from epoch 74). On this
-real, mostly clear data it is within single-seed noise of `s2_only` and `early_fusion`, as
-expected without cloud or dropout training. Early fusion does not beat optical-only either.
-
-The `*_robust` runs were trained with synthetic clouds and modality dropout (`best.pt` still
-selected on the real valid split; epochs 88 and 95). With that training, early fusion's valid
-IoU under fixed synthetic clouds (`val_iou_cloud50`, about 0.77) is close to FusionNet's
-(about 0.78). The question for the robustness evaluation is therefore: **does the architecture
-still matter once both models get the same robustness training?**
-
-**Caveat: the training-time synthetic clouds are semi-transparent.** Inside the cloud mask the
-median opacity is about 0.8, and water still stands out from land through the cloud (NDWI AUC
-0.98, about the same as in clear sky; [docs/cloud_leakage.md](docs/cloud_leakage.md)). This
-explains why the optical-only robust model scores as well under these clouds as FusionNet.
-
-The robustness evaluation therefore reports two settings:
-- **Thick:** the clouds as trained.
-- **Opaque:** the same cloud masks with opacity 1, so no ground signal survives under the
-  cloud.
-
-**Opaque results are the stricter test.** Training is unchanged.
-
-### Robustness under opaque clouds (test, training seed 0)
-Source: [docs/results/](docs/results/) (`robustness.csv`, `summary.md`). Each value is water
-IoU on the 90 test chips, averaged over 3 cloud seeds.
-
-| model | clear | 40% opaque | 80% opaque | 100% opaque | S2 removed |
-|---|--:|--:|--:|--:|--:|
-| s1_only | 0.657 | 0.657 | 0.657 | 0.657 | 0.657 |
-| s2_only_robust | 0.821 | 0.526 | 0.215 | 0.064 | n/a |
-| early_fusion_robust | 0.819 | 0.730 | 0.616 | 0.530 | 0.635 |
-| fusion_robust | 0.813 | 0.750 | 0.687 | 0.650 | 0.639 |
-
-- **Fusion holds up under cloud.** `fusion_robust` is the best of all seven models at every
-  coverage from 20% to 80%, and stays above SAR alone up to 80% (0.687 vs 0.657).
-- **At 100% opaque cloud** it is level with SAR alone (0.650 vs 0.657), and still well ahead of
-  `early_fusion_robust` (0.530) and `s2_only_robust` (0.064).
-- **The training clouds leak.** `s2_only_robust` keeps 0.791 under 100% thick (training-style)
-  cloud but only 0.064 under 100% opaque cloud. Thick-cloud results overstate optical
-  robustness.
-- **Bolivia (15 chips) disagrees at 100% opaque.** There `fusion` (no robustness training)
-  scores 0.687, above `fusion_robust` at 0.618. This is a small sample, and `fusion` scores
-  0.000 on Bolivia with S2 removed.
-- **One training seed.** The ± in `summary.md` is over cloud seeds only, so it does not
-  measure training variance. More training seeds are planned (see Status).
+- **Single training seed.** Every number above is one training run per model; the ± spread in
+  `docs/results/` covers only the random cloud layouts, not training variance.
+- **Labels are missing under real clouds.** The human annotators could not see through
+  clouds either: on the test split about half of the really-cloudy pixels are unlabelled and
+  very few are labelled water (3.3%, against 12.9% of clear pixels). Scores on really-cloudy images therefore only reflect the
+  visible parts — which is why the synthetic opaque clouds, applied over fully labelled
+  clear scenes, are the main experiment and the real-cloud tables are supporting evidence.
+- **The cloud detector itself fails on some chips.** On 10 chips (mostly from the Paraguay
+  flood) s2cloudless reports ~100% cloud over plainly visible ground, traced to an elevated
+  cirrus band (B10) in the source data; these chips are flagged and all real-cloud tables
+  are reported with and without them. The detector also over-flags haze and bright bare
+  ground at its default threshold; a stricter-threshold variant is provided as a sensitivity
+  check ([docs/cloud_audit.md](docs/cloud_audit.md)).
+- **Bolivia is small.** The held-out region has only 15 chips, so its numbers are noisy and
+  its model ranking can disagree with the test split at single coverages.
 
 ## Repository layout
 
@@ -100,7 +105,7 @@ src/floodfusion/   the package (all logic lives here)
   data.py, chips.py      Sen1Floods11 dataset; missing-value, clipping and normalisation rules
   stats.py               normalisation statistics (train split only)
   clouds.py              real cloud cover per chip (s2cloudless, optional `clouds` extra)
-  cloud_audit.py         audit of the s2cloudless masks: thresholds, labels under cloud
+  cloud_audit.py         audit of the s2cloudless masks: thresholds, labels under cloud, unreliable-mask flag
   clouds_synth.py        synthetic clouds for Sentinel-2 (robustness training; opaque variant for evaluation)
   cloud_leakage.py       how much ground signal survives under the synthetic clouds
   transforms.py          crops/flips/rotations, synthetic clouds, modality dropout
@@ -163,9 +168,10 @@ thick clouds (as trained) and opaque clouds (the stricter test), and also evalua
 removed. Expect about 15-25 min on a T4. This is final reporting only.
 
 `notebooks/05_cloud_audit.ipynb` (CPU runtime) audits the s2cloudless masks behind the
-real-cloud bins (`scripts/audit_clouds.py`). It writes to `floodfusion/results/cloud_audit/`.
-The local findings are in [docs/cloud_audit.md](docs/cloud_audit.md): threshold 0.4 over-flags
-haze, and the hand labels leave water under cloud unlabelled.
+real-cloud bins (`scripts/audit_clouds.py`); this has been run on the full data, with the
+findings in [docs/cloud_audit.md](docs/cloud_audit.md). `scripts/flag_cloud_masks.py` turns
+its `chip_audit.csv` into the `mask_unreliable` flags in `docs/cloud_cover.csv` and the 0.6
+sensitivity file `docs/cloud_cover_t06.csv`.
 
 ## Dataset and citation
 
