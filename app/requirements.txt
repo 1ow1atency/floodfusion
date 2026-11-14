@@ -1,0 +1,4 @@
+# Hugging Face Space dependencies. gradio itself comes from sdk_version in README.md.
+# floodfusion (this project's package) pulls torch, numpy, segmentation-models-pytorch, etc.
+git+https://github.com/1ow1atency/floodfusion.git@main
+huggingface_hub
