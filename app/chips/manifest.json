@@ -1,0 +1,62 @@
+{
+  "rule": "test split; s2cloudless cloud fraction <= 1% with a reliable mask and fully valid S2; water >= 5% of labelled pixels; round-robin over regions (ordered by their wettest candidate), within a region by descending water fraction, until 8 chips",
+  "split": "test",
+  "chips": [
+    {
+      "chip_id": "Mekong_1443339",
+      "region": "Mekong",
+      "cloud_fraction": 0.0,
+      "water_fraction": 0.7354340320827055,
+      "file": "Mekong_1443339.npz"
+    },
+    {
+      "chip_id": "Spain_5650136",
+      "region": "Spain",
+      "cloud_fraction": 0.000885,
+      "water_fraction": 0.6072810555024593,
+      "file": "Spain_5650136.npz"
+    },
+    {
+      "chip_id": "India_399883",
+      "region": "India",
+      "cloud_fraction": 0.00013,
+      "water_fraction": 0.5199623071963497,
+      "file": "India_399883.npz"
+    },
+    {
+      "chip_id": "Sri-Lanka_713926",
+      "region": "Sri-Lanka",
+      "cloud_fraction": 0.0,
+      "water_fraction": 0.30715288587736167,
+      "file": "Sri-Lanka_713926.npz"
+    },
+    {
+      "chip_id": "USA_905409",
+      "region": "USA",
+      "cloud_fraction": 0.0,
+      "water_fraction": 0.16965726691059485,
+      "file": "USA_905409.npz"
+    },
+    {
+      "chip_id": "Paraguay_232281",
+      "region": "Paraguay",
+      "cloud_fraction": 0.0,
+      "water_fraction": 0.11244583129882812,
+      "file": "Paraguay_232281.npz"
+    },
+    {
+      "chip_id": "Spain_7387658",
+      "region": "Spain",
+      "cloud_fraction": 0.00251,
+      "water_fraction": 0.5838653422728644,
+      "file": "Spain_7387658.npz"
+    },
+    {
+      "chip_id": "India_900498",
+      "region": "India",
+      "cloud_fraction": 0.0,
+      "water_fraction": 0.4731174997709854,
+      "file": "India_900498.npz"
+    }
+  ]
+}

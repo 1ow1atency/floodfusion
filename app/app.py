@@ -51,7 +51,7 @@ Drag the slider to cover the optical image with **synthetic, fully opaque clouds
 (radar is unaffected — and the flood on the ground doesn't change, so the label stays
 the truth). The optical-only model loses the water under the clouds; the fusion model
 keeps finding it from radar. On the full test split (90 chips, seed 0), water IoU at
-100% opaque cloud: optical-only **0.06** vs fusion **0.65** (both ~0.82 with no clouds).
+100% opaque cloud: optical-only **0.06** vs fusion **0.65** (0.82 and 0.81 with no clouds).
 
 *The clouds are synthetic and opaque (no ground signal underneath) — the stricter variant
 of the project's robustness evaluation; real clouds are often semi-transparent. IoU below
