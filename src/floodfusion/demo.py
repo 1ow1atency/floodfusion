@@ -361,10 +361,14 @@ def _rgb_bytes(colour: str) -> list[int]:
 STATIC_COVERAGES: tuple[int, ...] = tuple(range(0, 101, 10))  # percent
 WEBP_QUALITY = 92  # visually near-lossless on these 512 px panels; the whole export stays ~6 MB
 DATA_JSON = "data.json"
-# Headline numbers quoted in both front-ends; from docs/results/summary.md (test split, seed 0).
-HEADLINE = {"split": DEMO_SPLIT, "n_chips": 90, "seed": 0,
-            "clean": {"s2_only_robust": 0.8212, "fusion_robust": 0.8130},
-            "opaque_100": {"s2_only_robust": 0.0640, "fusion_robust": 0.6496}}
+# Headline numbers quoted in both front-ends, from docs/results/robustness_by_model.csv
+# (test split, opaque synthetic clouds). fusion_robust is the mean over 3 training seeds;
+# s2_only_robust has a single training seed. Keep index.html and the app's INTRO in step
+# with these (a test checks all four values appear in both).
+HEADLINE = {"split": DEMO_SPLIT, "n_chips": 90,
+            "seeds": {"s2_only_robust": 1, "fusion_robust": 3},
+            "clean": {"s2_only_robust": 0.8212, "fusion_robust": 0.8109},
+            "opaque_100": {"s2_only_robust": 0.0640, "fusion_robust": 0.6444}}
 
 
 def _save_rgb(arr: np.ndarray, path: Path, quality: int = WEBP_QUALITY) -> int:

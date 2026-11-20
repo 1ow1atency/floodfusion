@@ -1,42 +1,130 @@
 model,split,setting,coverage,cloud_seed,iou,precision,recall,n_chips,note
-s1_only,test,thick_clouds,0.0,,0.656725,0.816793,0.770174,90,coverage 0 = clean (real S2 as acquired)
-s1_only,test,thick_clouds,0.2,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,thick_clouds,0.2,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,thick_clouds,0.2,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,thick_clouds,0.4,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,thick_clouds,0.4,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,thick_clouds,0.4,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,thick_clouds,0.6,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,thick_clouds,0.6,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,thick_clouds,0.6,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,thick_clouds,0.8,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,thick_clouds,0.8,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,thick_clouds,0.8,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,thick_clouds,1.0,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,thick_clouds,1.0,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,thick_clouds,1.0,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,0.0,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,0.2,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,0.2,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,0.2,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,0.4,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,0.4,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,0.4,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,0.6,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,0.6,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,0.6,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,0.8,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,0.8,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,0.8,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,1.0,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,1.0,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,opaque_clouds,1.0,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,s2_removed,,,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
-s1_only,test,s1_removed,,,,,,0,n/a: S1 is the only input
-s1_only,test,real_clouds,0-10%,,0.713331,0.835146,0.830235,54,
-s1_only,test,real_clouds,10-30%,,0.774205,0.840087,0.908021,11,
-s1_only,test,real_clouds,30-60%,,0.435076,0.782535,0.494914,13,
-s1_only,test,real_clouds,60-100%,,0.258378,0.277610,0.788565,11,
+s1_only_seed0,test,thick_clouds,0.0,,0.656725,0.816793,0.770174,90,coverage 0 = clean (real S2 as acquired)
+s1_only_seed0,test,thick_clouds,0.2,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,thick_clouds,0.2,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,thick_clouds,0.2,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,thick_clouds,0.4,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,thick_clouds,0.4,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,thick_clouds,0.4,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,thick_clouds,0.6,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,thick_clouds,0.6,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,thick_clouds,0.6,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,thick_clouds,0.8,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,thick_clouds,0.8,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,thick_clouds,0.8,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,thick_clouds,1.0,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,thick_clouds,1.0,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,thick_clouds,1.0,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,0.0,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,0.2,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,0.2,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,0.2,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,0.4,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,0.4,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,0.4,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,0.6,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,0.6,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,0.6,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,0.8,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,0.8,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,0.8,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,1.0,0,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,1.0,1,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,opaque_clouds,1.0,2,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,s2_removed,,,0.656725,0.816793,0.770174,90,unaffected: model has no S2 input (clean result)
+s1_only_seed0,test,s1_removed,,,,,,0,n/a: S1 is the only input
+s1_only_seed0,test,real_clouds,0-10%,,0.713331,0.835146,0.830235,54,
+s1_only_seed0,test,real_clouds,10-30%,,0.774205,0.840087,0.908021,11,
+s1_only_seed0,test,real_clouds,30-60%,,0.435076,0.782535,0.494914,13,
+s1_only_seed0,test,real_clouds,60-100%,,0.258378,0.277610,0.788565,11,
+s1_only_seed0,test,real_clouds_reliable,0-10%,,0.713331,0.835146,0.830235,54,
+s1_only_seed0,test,real_clouds_reliable,10-30%,,0.774205,0.840087,0.908021,11,
+s1_only_seed0,test,real_clouds_reliable,30-60%,,0.435076,0.782535,0.494914,13,
+s1_only_seed0,test,real_clouds_reliable,60-100%,,0.215982,0.232801,0.749341,9,unreliable: fewer than 10 chips
+s1_only_seed1,test,thick_clouds,0.0,,0.660226,0.848811,0.748215,90,coverage 0 = clean (real S2 as acquired)
+s1_only_seed1,test,thick_clouds,0.2,0,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,thick_clouds,0.2,1,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,thick_clouds,0.2,2,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,thick_clouds,0.4,0,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,thick_clouds,0.4,1,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,thick_clouds,0.4,2,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,thick_clouds,0.6,0,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,thick_clouds,0.6,1,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,thick_clouds,0.6,2,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,thick_clouds,0.8,0,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,thick_clouds,0.8,1,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,thick_clouds,0.8,2,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,thick_clouds,1.0,0,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,thick_clouds,1.0,1,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,thick_clouds,1.0,2,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,0.0,0,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,0.2,0,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,0.2,1,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,0.2,2,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,0.4,0,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,0.4,1,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,0.4,2,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,0.6,0,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,0.6,1,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,0.6,2,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,0.8,0,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,0.8,1,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,0.8,2,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,1.0,0,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,1.0,1,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,opaque_clouds,1.0,2,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,s2_removed,,,0.660226,0.848811,0.748215,90,unaffected: model has no S2 input (clean result)
+s1_only_seed1,test,s1_removed,,,,,,0,n/a: S1 is the only input
+s1_only_seed1,test,real_clouds,0-10%,,0.722525,0.865147,0.814225,54,
+s1_only_seed1,test,real_clouds,10-30%,,0.799441,0.877772,0.899583,11,
+s1_only_seed1,test,real_clouds,30-60%,,0.393574,0.797871,0.437162,13,
+s1_only_seed1,test,real_clouds,60-100%,,0.272059,0.308654,0.696474,11,
+s1_only_seed1,test,real_clouds_reliable,0-10%,,0.722525,0.865147,0.814225,54,
+s1_only_seed1,test,real_clouds_reliable,10-30%,,0.799441,0.877772,0.899583,11,
+s1_only_seed1,test,real_clouds_reliable,30-60%,,0.393574,0.797871,0.437162,13,
+s1_only_seed1,test,real_clouds_reliable,60-100%,,0.230411,0.256290,0.695298,9,unreliable: fewer than 10 chips
+s1_only_seed2,test,thick_clouds,0.0,,0.651388,0.814113,0.765197,90,coverage 0 = clean (real S2 as acquired)
+s1_only_seed2,test,thick_clouds,0.2,0,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,thick_clouds,0.2,1,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,thick_clouds,0.2,2,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,thick_clouds,0.4,0,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,thick_clouds,0.4,1,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,thick_clouds,0.4,2,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,thick_clouds,0.6,0,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,thick_clouds,0.6,1,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,thick_clouds,0.6,2,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,thick_clouds,0.8,0,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,thick_clouds,0.8,1,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,thick_clouds,0.8,2,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,thick_clouds,1.0,0,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,thick_clouds,1.0,1,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,thick_clouds,1.0,2,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,0.0,0,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,0.2,0,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,0.2,1,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,0.2,2,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,0.4,0,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,0.4,1,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,0.4,2,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,0.6,0,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,0.6,1,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,0.6,2,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,0.8,0,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,0.8,1,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,0.8,2,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,1.0,0,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,1.0,1,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,opaque_clouds,1.0,2,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,s2_removed,,,0.651388,0.814113,0.765197,90,unaffected: model has no S2 input (clean result)
+s1_only_seed2,test,s1_removed,,,,,,0,n/a: S1 is the only input
+s1_only_seed2,test,real_clouds,0-10%,,0.718255,0.828851,0.843332,54,
+s1_only_seed2,test,real_clouds,10-30%,,0.784637,0.860324,0.899182,11,
+s1_only_seed2,test,real_clouds,30-60%,,0.361845,0.754983,0.409991,13,
+s1_only_seed2,test,real_clouds,60-100%,,0.271997,0.295573,0.773241,11,
+s1_only_seed2,test,real_clouds_reliable,0-10%,,0.718255,0.828851,0.843332,54,
+s1_only_seed2,test,real_clouds_reliable,10-30%,,0.784637,0.860324,0.899182,11,
+s1_only_seed2,test,real_clouds_reliable,30-60%,,0.361845,0.754983,0.409991,13,
+s1_only_seed2,test,real_clouds_reliable,60-100%,,0.224141,0.241171,0.760437,9,unreliable: fewer than 10 chips
 s2_only,test,thick_clouds,0.0,,0.827641,0.926947,0.885392,90,coverage 0 = clean (real S2 as acquired)
 s2_only,test,thick_clouds,0.2,0,0.734184,0.872810,0.822144,90,
 s2_only,test,thick_clouds,0.2,1,0.720762,0.866743,0.810587,90,
@@ -75,6 +163,10 @@ s2_only,test,real_clouds,0-10%,,0.877639,0.931839,0.937846,54,
 s2_only,test,real_clouds,10-30%,,0.902366,0.958678,0.938884,11,
 s2_only,test,real_clouds,30-60%,,0.678730,0.887639,0.742525,13,
 s2_only,test,real_clouds,60-100%,,0.346837,0.618274,0.441346,11,
+s2_only,test,real_clouds_reliable,0-10%,,0.877639,0.931839,0.937846,54,
+s2_only,test,real_clouds_reliable,10-30%,,0.902366,0.958678,0.938884,11,
+s2_only,test,real_clouds_reliable,30-60%,,0.678730,0.887639,0.742525,13,
+s2_only,test,real_clouds_reliable,60-100%,,0.355390,0.645432,0.441606,9,unreliable: fewer than 10 chips
 s2_only_robust,test,thick_clouds,0.0,,0.821167,0.919003,0.885235,90,coverage 0 = clean (real S2 as acquired)
 s2_only_robust,test,thick_clouds,0.2,0,0.810331,0.922731,0.869320,90,
 s2_only_robust,test,thick_clouds,0.2,1,0.810940,0.922807,0.869954,90,
@@ -113,6 +205,10 @@ s2_only_robust,test,real_clouds,0-10%,,0.873581,0.923378,0.941856,54,
 s2_only_robust,test,real_clouds,10-30%,,0.898731,0.953119,0.940298,11,
 s2_only_robust,test,real_clouds,30-60%,,0.661700,0.877868,0.728791,13,
 s2_only_robust,test,real_clouds,60-100%,,0.254428,0.572363,0.314146,11,
+s2_only_robust,test,real_clouds_reliable,0-10%,,0.873581,0.923378,0.941856,54,
+s2_only_robust,test,real_clouds_reliable,10-30%,,0.898731,0.953119,0.940298,11,
+s2_only_robust,test,real_clouds_reliable,30-60%,,0.661700,0.877868,0.728791,13,
+s2_only_robust,test,real_clouds_reliable,60-100%,,0.259018,0.632346,0.304941,9,unreliable: fewer than 10 chips
 early_fusion,test,thick_clouds,0.0,,0.820206,0.933927,0.870733,90,coverage 0 = clean (real S2 as acquired)
 early_fusion,test,thick_clouds,0.2,0,0.771664,0.937032,0.813867,90,
 early_fusion,test,thick_clouds,0.2,1,0.767567,0.935752,0.810269,90,
@@ -151,44 +247,136 @@ early_fusion,test,real_clouds,0-10%,,0.881376,0.936930,0.936966,54,
 early_fusion,test,real_clouds,10-30%,,0.907442,0.963177,0.940055,11,
 early_fusion,test,real_clouds,30-60%,,0.604257,0.902996,0.646204,13,
 early_fusion,test,real_clouds,60-100%,,0.420783,0.659080,0.537850,11,
-early_fusion_robust,test,thick_clouds,0.0,,0.818975,0.913240,0.888071,90,coverage 0 = clean (real S2 as acquired)
-early_fusion_robust,test,thick_clouds,0.2,0,0.804050,0.917115,0.867056,90,
-early_fusion_robust,test,thick_clouds,0.2,1,0.803633,0.917336,0.866374,90,
-early_fusion_robust,test,thick_clouds,0.2,2,0.805468,0.917462,0.868393,90,
-early_fusion_robust,test,thick_clouds,0.4,0,0.786137,0.917797,0.845681,90,
-early_fusion_robust,test,thick_clouds,0.4,1,0.787877,0.916714,0.848622,90,
-early_fusion_robust,test,thick_clouds,0.4,2,0.789066,0.916587,0.850111,90,
-early_fusion_robust,test,thick_clouds,0.6,0,0.777656,0.916850,0.836663,90,
-early_fusion_robust,test,thick_clouds,0.6,1,0.773366,0.914957,0.833263,90,
-early_fusion_robust,test,thick_clouds,0.6,2,0.780899,0.919737,0.838006,90,
-early_fusion_robust,test,thick_clouds,0.8,0,0.760754,0.917910,0.816291,90,
-early_fusion_robust,test,thick_clouds,0.8,1,0.761659,0.914604,0.819972,90,
-early_fusion_robust,test,thick_clouds,0.8,2,0.764321,0.918324,0.820068,90,
-early_fusion_robust,test,thick_clouds,1.0,0,0.728795,0.919598,0.778395,90,
-early_fusion_robust,test,thick_clouds,1.0,1,0.730771,0.918783,0.781237,90,
-early_fusion_robust,test,thick_clouds,1.0,2,0.735547,0.918369,0.787001,90,
-early_fusion_robust,test,opaque_clouds,0.0,0,0.818975,0.913240,0.888071,90,coverage 0 through the opaque path: checked equal to clean
-early_fusion_robust,test,opaque_clouds,0.2,0,0.774329,0.910274,0.838313,90,
-early_fusion_robust,test,opaque_clouds,0.2,1,0.780045,0.908265,0.846757,90,
-early_fusion_robust,test,opaque_clouds,0.2,2,0.776944,0.911238,0.840558,90,
-early_fusion_robust,test,opaque_clouds,0.4,0,0.722195,0.900223,0.785033,90,
-early_fusion_robust,test,opaque_clouds,0.4,1,0.735080,0.900413,0.800131,90,
-early_fusion_robust,test,opaque_clouds,0.4,2,0.733654,0.898785,0.799727,90,
-early_fusion_robust,test,opaque_clouds,0.6,0,0.689731,0.887391,0.755891,90,
-early_fusion_robust,test,opaque_clouds,0.6,1,0.679335,0.889578,0.741895,90,
-early_fusion_robust,test,opaque_clouds,0.6,2,0.693520,0.897632,0.753081,90,
-early_fusion_robust,test,opaque_clouds,0.8,0,0.624052,0.885682,0.678722,90,
-early_fusion_robust,test,opaque_clouds,0.8,1,0.608955,0.878047,0.665218,90,
-early_fusion_robust,test,opaque_clouds,0.8,2,0.616271,0.881514,0.671930,90,
-early_fusion_robust,test,opaque_clouds,1.0,0,0.533942,0.872931,0.578939,90,
-early_fusion_robust,test,opaque_clouds,1.0,1,0.521560,0.861772,0.569176,90,
-early_fusion_robust,test,opaque_clouds,1.0,2,0.535153,0.870640,0.581381,90,
-early_fusion_robust,test,s2_removed,,,0.634767,0.857594,0.709558,90,
-early_fusion_robust,test,s1_removed,,,0.812669,0.906418,0.887100,90,
-early_fusion_robust,test,real_clouds,0-10%,,0.864465,0.917053,0.937791,54,
-early_fusion_robust,test,real_clouds,10-30%,,0.891535,0.945587,0.939747,11,
-early_fusion_robust,test,real_clouds,30-60%,,0.686827,0.882706,0.755807,13,
-early_fusion_robust,test,real_clouds,60-100%,,0.379061,0.594197,0.511469,11,
+early_fusion,test,real_clouds_reliable,0-10%,,0.881376,0.936930,0.936966,54,
+early_fusion,test,real_clouds_reliable,10-30%,,0.907442,0.963177,0.940055,11,
+early_fusion,test,real_clouds_reliable,30-60%,,0.604257,0.902996,0.646204,13,
+early_fusion,test,real_clouds_reliable,60-100%,,0.447525,0.714495,0.544983,9,unreliable: fewer than 10 chips
+early_fusion_robust_seed0,test,thick_clouds,0.0,,0.818975,0.913240,0.888071,90,coverage 0 = clean (real S2 as acquired)
+early_fusion_robust_seed0,test,thick_clouds,0.2,0,0.804050,0.917115,0.867056,90,
+early_fusion_robust_seed0,test,thick_clouds,0.2,1,0.803633,0.917336,0.866374,90,
+early_fusion_robust_seed0,test,thick_clouds,0.2,2,0.805468,0.917462,0.868393,90,
+early_fusion_robust_seed0,test,thick_clouds,0.4,0,0.786137,0.917797,0.845681,90,
+early_fusion_robust_seed0,test,thick_clouds,0.4,1,0.787877,0.916714,0.848622,90,
+early_fusion_robust_seed0,test,thick_clouds,0.4,2,0.789066,0.916587,0.850111,90,
+early_fusion_robust_seed0,test,thick_clouds,0.6,0,0.777656,0.916850,0.836663,90,
+early_fusion_robust_seed0,test,thick_clouds,0.6,1,0.773366,0.914957,0.833263,90,
+early_fusion_robust_seed0,test,thick_clouds,0.6,2,0.780899,0.919737,0.838006,90,
+early_fusion_robust_seed0,test,thick_clouds,0.8,0,0.760754,0.917910,0.816291,90,
+early_fusion_robust_seed0,test,thick_clouds,0.8,1,0.761659,0.914604,0.819972,90,
+early_fusion_robust_seed0,test,thick_clouds,0.8,2,0.764321,0.918324,0.820068,90,
+early_fusion_robust_seed0,test,thick_clouds,1.0,0,0.728795,0.919598,0.778395,90,
+early_fusion_robust_seed0,test,thick_clouds,1.0,1,0.730771,0.918783,0.781237,90,
+early_fusion_robust_seed0,test,thick_clouds,1.0,2,0.735547,0.918369,0.787001,90,
+early_fusion_robust_seed0,test,opaque_clouds,0.0,0,0.818975,0.913240,0.888071,90,coverage 0 through the opaque path: checked equal to clean
+early_fusion_robust_seed0,test,opaque_clouds,0.2,0,0.774329,0.910274,0.838313,90,
+early_fusion_robust_seed0,test,opaque_clouds,0.2,1,0.780045,0.908265,0.846757,90,
+early_fusion_robust_seed0,test,opaque_clouds,0.2,2,0.776944,0.911238,0.840558,90,
+early_fusion_robust_seed0,test,opaque_clouds,0.4,0,0.722195,0.900223,0.785033,90,
+early_fusion_robust_seed0,test,opaque_clouds,0.4,1,0.735080,0.900413,0.800131,90,
+early_fusion_robust_seed0,test,opaque_clouds,0.4,2,0.733654,0.898785,0.799727,90,
+early_fusion_robust_seed0,test,opaque_clouds,0.6,0,0.689731,0.887391,0.755891,90,
+early_fusion_robust_seed0,test,opaque_clouds,0.6,1,0.679335,0.889578,0.741895,90,
+early_fusion_robust_seed0,test,opaque_clouds,0.6,2,0.693520,0.897632,0.753081,90,
+early_fusion_robust_seed0,test,opaque_clouds,0.8,0,0.624052,0.885682,0.678722,90,
+early_fusion_robust_seed0,test,opaque_clouds,0.8,1,0.608955,0.878047,0.665218,90,
+early_fusion_robust_seed0,test,opaque_clouds,0.8,2,0.616271,0.881514,0.671930,90,
+early_fusion_robust_seed0,test,opaque_clouds,1.0,0,0.533942,0.872931,0.578939,90,
+early_fusion_robust_seed0,test,opaque_clouds,1.0,1,0.521560,0.861772,0.569176,90,
+early_fusion_robust_seed0,test,opaque_clouds,1.0,2,0.535153,0.870640,0.581381,90,
+early_fusion_robust_seed0,test,s2_removed,,,0.634767,0.857594,0.709558,90,
+early_fusion_robust_seed0,test,s1_removed,,,0.812669,0.906418,0.887100,90,
+early_fusion_robust_seed0,test,real_clouds,0-10%,,0.864465,0.917053,0.937791,54,
+early_fusion_robust_seed0,test,real_clouds,10-30%,,0.891535,0.945587,0.939747,11,
+early_fusion_robust_seed0,test,real_clouds,30-60%,,0.686827,0.882706,0.755807,13,
+early_fusion_robust_seed0,test,real_clouds,60-100%,,0.379061,0.594197,0.511469,11,
+early_fusion_robust_seed0,test,real_clouds_reliable,0-10%,,0.864465,0.917053,0.937791,54,
+early_fusion_robust_seed0,test,real_clouds_reliable,10-30%,,0.891535,0.945587,0.939747,11,
+early_fusion_robust_seed0,test,real_clouds_reliable,30-60%,,0.686827,0.882706,0.755807,13,
+early_fusion_robust_seed0,test,real_clouds_reliable,60-100%,,0.402784,0.624742,0.531332,9,unreliable: fewer than 10 chips
+early_fusion_robust_seed1,test,thick_clouds,0.0,,0.819685,0.925000,0.878041,90,coverage 0 = clean (real S2 as acquired)
+early_fusion_robust_seed1,test,thick_clouds,0.2,0,0.800944,0.920059,0.860852,90,
+early_fusion_robust_seed1,test,thick_clouds,0.2,1,0.801373,0.921513,0.860077,90,
+early_fusion_robust_seed1,test,thick_clouds,0.2,2,0.804512,0.922256,0.863042,90,
+early_fusion_robust_seed1,test,thick_clouds,0.4,0,0.780946,0.912316,0.844319,90,
+early_fusion_robust_seed1,test,thick_clouds,0.4,1,0.783508,0.910843,0.848589,90,
+early_fusion_robust_seed1,test,thick_clouds,0.4,2,0.783678,0.913798,0.846238,90,
+early_fusion_robust_seed1,test,thick_clouds,0.6,0,0.767864,0.907667,0.832925,90,
+early_fusion_robust_seed1,test,thick_clouds,0.6,1,0.764960,0.905456,0.831365,90,
+early_fusion_robust_seed1,test,thick_clouds,0.6,2,0.770106,0.905695,0.837242,90,
+early_fusion_robust_seed1,test,thick_clouds,0.8,0,0.749957,0.901247,0.817102,90,
+early_fusion_robust_seed1,test,thick_clouds,0.8,1,0.746846,0.896798,0.817070,90,
+early_fusion_robust_seed1,test,thick_clouds,0.8,2,0.751684,0.901239,0.819160,90,
+early_fusion_robust_seed1,test,thick_clouds,1.0,0,0.723225,0.895267,0.790070,90,
+early_fusion_robust_seed1,test,thick_clouds,1.0,1,0.721439,0.891596,0.790804,90,
+early_fusion_robust_seed1,test,thick_clouds,1.0,2,0.727719,0.891647,0.798316,90,
+early_fusion_robust_seed1,test,opaque_clouds,0.0,0,0.819685,0.925000,0.878041,90,coverage 0 through the opaque path: checked equal to clean
+early_fusion_robust_seed1,test,opaque_clouds,0.2,0,0.779649,0.919331,0.836904,90,
+early_fusion_robust_seed1,test,opaque_clouds,0.2,1,0.781250,0.913927,0.843298,90,
+early_fusion_robust_seed1,test,opaque_clouds,0.2,2,0.782445,0.920567,0.839097,90,
+early_fusion_robust_seed1,test,opaque_clouds,0.4,0,0.732894,0.897799,0.799605,90,
+early_fusion_robust_seed1,test,opaque_clouds,0.4,1,0.741766,0.899815,0.808541,90,
+early_fusion_robust_seed1,test,opaque_clouds,0.4,2,0.734878,0.897232,0.802419,90,
+early_fusion_robust_seed1,test,opaque_clouds,0.6,0,0.693090,0.876327,0.768234,90,
+early_fusion_robust_seed1,test,opaque_clouds,0.6,1,0.694512,0.884904,0.763479,90,
+early_fusion_robust_seed1,test,opaque_clouds,0.6,2,0.706001,0.896451,0.768688,90,
+early_fusion_robust_seed1,test,opaque_clouds,0.8,0,0.670242,0.875963,0.740522,90,
+early_fusion_robust_seed1,test,opaque_clouds,0.8,1,0.659339,0.863481,0.736069,90,
+early_fusion_robust_seed1,test,opaque_clouds,0.8,2,0.647583,0.844181,0.735497,90,
+early_fusion_robust_seed1,test,opaque_clouds,1.0,0,0.601223,0.812400,0.698150,90,
+early_fusion_robust_seed1,test,opaque_clouds,1.0,1,0.598020,0.806720,0.698033,90,
+early_fusion_robust_seed1,test,opaque_clouds,1.0,2,0.600500,0.808023,0.700432,90,
+early_fusion_robust_seed1,test,s2_removed,,,0.629776,0.864329,0.698861,90,
+early_fusion_robust_seed1,test,s1_removed,,,0.816102,0.935319,0.864915,90,
+early_fusion_robust_seed1,test,real_clouds,0-10%,,0.868210,0.930730,0.928187,54,
+early_fusion_robust_seed1,test,real_clouds,10-30%,,0.894595,0.953947,0.934974,11,
+early_fusion_robust_seed1,test,real_clouds,30-60%,,0.677189,0.894035,0.736286,13,
+early_fusion_robust_seed1,test,real_clouds,60-100%,,0.374469,0.538418,0.551525,11,
+early_fusion_robust_seed1,test,real_clouds_reliable,0-10%,,0.868210,0.930730,0.928187,54,
+early_fusion_robust_seed1,test,real_clouds_reliable,10-30%,,0.894595,0.953947,0.934974,11,
+early_fusion_robust_seed1,test,real_clouds_reliable,30-60%,,0.677189,0.894035,0.736286,13,
+early_fusion_robust_seed1,test,real_clouds_reliable,60-100%,,0.396512,0.552286,0.584338,9,unreliable: fewer than 10 chips
+early_fusion_robust_seed2,test,thick_clouds,0.0,,0.813812,0.914810,0.880543,90,coverage 0 = clean (real S2 as acquired)
+early_fusion_robust_seed2,test,thick_clouds,0.2,0,0.796579,0.917213,0.858289,90,
+early_fusion_robust_seed2,test,thick_clouds,0.2,1,0.798219,0.918218,0.859311,90,
+early_fusion_robust_seed2,test,thick_clouds,0.2,2,0.799346,0.919137,0.859811,90,
+early_fusion_robust_seed2,test,thick_clouds,0.4,0,0.781012,0.915501,0.841685,90,
+early_fusion_robust_seed2,test,thick_clouds,0.4,1,0.779361,0.912213,0.842554,90,
+early_fusion_robust_seed2,test,thick_clouds,0.4,2,0.781584,0.916093,0.841850,90,
+early_fusion_robust_seed2,test,thick_clouds,0.6,0,0.774019,0.914787,0.834162,90,
+early_fusion_robust_seed2,test,thick_clouds,0.6,1,0.769166,0.915198,0.828191,90,
+early_fusion_robust_seed2,test,thick_clouds,0.6,2,0.774351,0.914990,0.834379,90,
+early_fusion_robust_seed2,test,thick_clouds,0.8,0,0.755886,0.911909,0.815428,90,
+early_fusion_robust_seed2,test,thick_clouds,0.8,1,0.754302,0.910584,0.814642,90,
+early_fusion_robust_seed2,test,thick_clouds,0.8,2,0.753295,0.908832,0.814871,90,
+early_fusion_robust_seed2,test,thick_clouds,1.0,0,0.720672,0.913198,0.773671,90,
+early_fusion_robust_seed2,test,thick_clouds,1.0,1,0.716242,0.908992,0.771571,90,
+early_fusion_robust_seed2,test,thick_clouds,1.0,2,0.723094,0.907548,0.780594,90,
+early_fusion_robust_seed2,test,opaque_clouds,0.0,0,0.813812,0.914810,0.880543,90,coverage 0 through the opaque path: checked equal to clean
+early_fusion_robust_seed2,test,opaque_clouds,0.2,0,0.768565,0.916274,0.826618,90,
+early_fusion_robust_seed2,test,opaque_clouds,0.2,1,0.779123,0.914696,0.840170,90,
+early_fusion_robust_seed2,test,opaque_clouds,0.2,2,0.775897,0.920205,0.831866,90,
+early_fusion_robust_seed2,test,opaque_clouds,0.4,0,0.724924,0.910295,0.780695,90,
+early_fusion_robust_seed2,test,opaque_clouds,0.4,1,0.735459,0.908763,0.794093,90,
+early_fusion_robust_seed2,test,opaque_clouds,0.4,2,0.733036,0.909728,0.790538,90,
+early_fusion_robust_seed2,test,opaque_clouds,0.6,0,0.688451,0.903774,0.742906,90,
+early_fusion_robust_seed2,test,opaque_clouds,0.6,1,0.689075,0.906250,0.741965,90,
+early_fusion_robust_seed2,test,opaque_clouds,0.6,2,0.690518,0.910417,0.740856,90,
+early_fusion_robust_seed2,test,opaque_clouds,0.8,0,0.637529,0.901369,0.685339,90,
+early_fusion_robust_seed2,test,opaque_clouds,0.8,1,0.636588,0.899358,0.685415,90,
+early_fusion_robust_seed2,test,opaque_clouds,0.8,2,0.634689,0.899056,0.683388,90,
+early_fusion_robust_seed2,test,opaque_clouds,1.0,0,0.545521,0.887516,0.586040,90,
+early_fusion_robust_seed2,test,opaque_clouds,1.0,1,0.544759,0.869178,0.593415,90,
+early_fusion_robust_seed2,test,opaque_clouds,1.0,2,0.541768,0.877601,0.586051,90,
+early_fusion_robust_seed2,test,s2_removed,,,0.599441,0.859054,0.664828,90,
+early_fusion_robust_seed2,test,s1_removed,,,0.806069,0.939561,0.850150,90,
+early_fusion_robust_seed2,test,real_clouds,0-10%,,0.864341,0.920262,0.934315,54,
+early_fusion_robust_seed2,test,real_clouds,10-30%,,0.895224,0.950419,0.939081,11,
+early_fusion_robust_seed2,test,real_clouds,30-60%,,0.663342,0.897683,0.717597,13,
+early_fusion_robust_seed2,test,real_clouds,60-100%,,0.344145,0.432404,0.627710,11,
+early_fusion_robust_seed2,test,real_clouds_reliable,0-10%,,0.864341,0.920262,0.934315,54,
+early_fusion_robust_seed2,test,real_clouds_reliable,10-30%,,0.895224,0.950419,0.939081,11,
+early_fusion_robust_seed2,test,real_clouds_reliable,30-60%,,0.663342,0.897683,0.717597,13,
+early_fusion_robust_seed2,test,real_clouds_reliable,60-100%,,0.515875,0.729180,0.638142,9,unreliable: fewer than 10 chips
 fusion,test,thick_clouds,0.0,,0.818089,0.922868,0.878131,90,coverage 0 = clean (real S2 as acquired)
 fusion,test,thick_clouds,0.2,0,0.771897,0.897267,0.846730,90,
 fusion,test,thick_clouds,0.2,1,0.766079,0.893984,0.842631,90,
@@ -227,82 +415,292 @@ fusion,test,real_clouds,0-10%,,0.877665,0.928291,0.941496,54,
 fusion,test,real_clouds,10-30%,,0.905285,0.950025,0.950552,11,
 fusion,test,real_clouds,30-60%,,0.609573,0.887216,0.660777,13,
 fusion,test,real_clouds,60-100%,,0.446941,0.600908,0.635614,11,
-fusion_robust,test,thick_clouds,0.0,,0.812953,0.915880,0.878551,90,coverage 0 = clean (real S2 as acquired)
-fusion_robust,test,thick_clouds,0.2,0,0.797547,0.911622,0.864380,90,
-fusion_robust,test,thick_clouds,0.2,1,0.799473,0.913605,0.864858,90,
-fusion_robust,test,thick_clouds,0.2,2,0.801362,0.914725,0.866062,90,
-fusion_robust,test,thick_clouds,0.4,0,0.784507,0.907111,0.853035,90,
-fusion_robust,test,thick_clouds,0.4,1,0.784781,0.904746,0.855462,90,
-fusion_robust,test,thick_clouds,0.4,2,0.787124,0.905254,0.857791,90,
-fusion_robust,test,thick_clouds,0.6,0,0.771277,0.901303,0.842426,90,
-fusion_robust,test,thick_clouds,0.6,1,0.766610,0.897066,0.840549,90,
-fusion_robust,test,thick_clouds,0.6,2,0.775124,0.901912,0.846481,90,
-fusion_robust,test,thick_clouds,0.8,0,0.752882,0.893437,0.827159,90,
-fusion_robust,test,thick_clouds,0.8,1,0.753377,0.888465,0.832071,90,
-fusion_robust,test,thick_clouds,0.8,2,0.754723,0.891678,0.830904,90,
-fusion_robust,test,thick_clouds,1.0,0,0.726581,0.880286,0.806247,90,
-fusion_robust,test,thick_clouds,1.0,1,0.729060,0.885677,0.804798,90,
-fusion_robust,test,thick_clouds,1.0,2,0.733450,0.884501,0.811136,90,
-fusion_robust,test,opaque_clouds,0.0,0,0.812953,0.915880,0.878551,90,coverage 0 through the opaque path: checked equal to clean
-fusion_robust,test,opaque_clouds,0.2,0,0.780465,0.903522,0.851421,90,
-fusion_robust,test,opaque_clouds,0.2,1,0.783156,0.900082,0.857725,90,
-fusion_robust,test,opaque_clouds,0.2,2,0.785840,0.906988,0.854720,90,
-fusion_robust,test,opaque_clouds,0.4,0,0.745394,0.884228,0.826008,90,
-fusion_robust,test,opaque_clouds,0.4,1,0.753439,0.883851,0.836235,90,
-fusion_robust,test,opaque_clouds,0.4,2,0.749998,0.881151,0.834405,90,
-fusion_robust,test,opaque_clouds,0.6,0,0.711692,0.864883,0.800720,90,
-fusion_robust,test,opaque_clouds,0.6,1,0.715207,0.865725,0.804443,90,
-fusion_robust,test,opaque_clouds,0.6,2,0.724123,0.871533,0.810650,90,
-fusion_robust,test,opaque_clouds,0.8,0,0.690092,0.852315,0.783818,90,
-fusion_robust,test,opaque_clouds,0.8,1,0.687710,0.848306,0.784141,90,
-fusion_robust,test,opaque_clouds,0.8,2,0.683167,0.845987,0.780201,90,
-fusion_robust,test,opaque_clouds,1.0,0,0.648686,0.827381,0.750219,90,
-fusion_robust,test,opaque_clouds,1.0,1,0.650437,0.829801,0.750570,90,
-fusion_robust,test,opaque_clouds,1.0,2,0.649824,0.828338,0.750953,90,
-fusion_robust,test,s2_removed,,,0.638516,0.883030,0.697513,90,
-fusion_robust,test,s1_removed,,,0.804384,0.905537,0.878063,90,
-fusion_robust,test,real_clouds,0-10%,,0.867086,0.920414,0.937364,54,
-fusion_robust,test,real_clouds,10-30%,,0.896510,0.946188,0.944677,11,
-fusion_robust,test,real_clouds,30-60%,,0.632313,0.885054,0.688886,13,
-fusion_robust,test,real_clouds,60-100%,,0.409089,0.572236,0.589302,11,
-s1_only,bolivia,thick_clouds,0.0,,0.625273,0.834107,0.714075,15,coverage 0 = clean (real S2 as acquired)
-s1_only,bolivia,thick_clouds,0.2,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,thick_clouds,0.2,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,thick_clouds,0.2,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,thick_clouds,0.4,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,thick_clouds,0.4,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,thick_clouds,0.4,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,thick_clouds,0.6,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,thick_clouds,0.6,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,thick_clouds,0.6,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,thick_clouds,0.8,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,thick_clouds,0.8,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,thick_clouds,0.8,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,thick_clouds,1.0,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,thick_clouds,1.0,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,thick_clouds,1.0,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,0.0,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,0.2,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,0.2,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,0.2,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,0.4,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,0.4,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,0.4,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,0.6,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,0.6,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,0.6,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,0.8,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,0.8,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,0.8,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,1.0,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,1.0,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,opaque_clouds,1.0,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,s2_removed,,,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
-s1_only,bolivia,s1_removed,,,,,,0,n/a: S1 is the only input
-s1_only,bolivia,real_clouds,0-10%,,0.708009,0.858820,0.801267,6,unreliable: fewer than 10 chips
-s1_only,bolivia,real_clouds,10-30%,,0.563920,0.814487,0.647026,4,unreliable: fewer than 10 chips
-s1_only,bolivia,real_clouds,30-60%,,0.535534,0.797852,0.619606,5,unreliable: fewer than 10 chips
-s1_only,bolivia,real_clouds,60-100%,,,,,0,no chips
+fusion,test,real_clouds_reliable,0-10%,,0.877665,0.928291,0.941496,54,
+fusion,test,real_clouds_reliable,10-30%,,0.905285,0.950025,0.950552,11,
+fusion,test,real_clouds_reliable,30-60%,,0.609573,0.887216,0.660777,13,
+fusion,test,real_clouds_reliable,60-100%,,0.470890,0.643976,0.636625,9,unreliable: fewer than 10 chips
+fusion_robust_seed0,test,thick_clouds,0.0,,0.812953,0.915880,0.878551,90,coverage 0 = clean (real S2 as acquired)
+fusion_robust_seed0,test,thick_clouds,0.2,0,0.797547,0.911622,0.864380,90,
+fusion_robust_seed0,test,thick_clouds,0.2,1,0.799473,0.913605,0.864858,90,
+fusion_robust_seed0,test,thick_clouds,0.2,2,0.801362,0.914725,0.866062,90,
+fusion_robust_seed0,test,thick_clouds,0.4,0,0.784507,0.907111,0.853035,90,
+fusion_robust_seed0,test,thick_clouds,0.4,1,0.784781,0.904746,0.855462,90,
+fusion_robust_seed0,test,thick_clouds,0.4,2,0.787124,0.905254,0.857791,90,
+fusion_robust_seed0,test,thick_clouds,0.6,0,0.771277,0.901303,0.842426,90,
+fusion_robust_seed0,test,thick_clouds,0.6,1,0.766610,0.897066,0.840549,90,
+fusion_robust_seed0,test,thick_clouds,0.6,2,0.775124,0.901912,0.846481,90,
+fusion_robust_seed0,test,thick_clouds,0.8,0,0.752882,0.893437,0.827159,90,
+fusion_robust_seed0,test,thick_clouds,0.8,1,0.753377,0.888465,0.832071,90,
+fusion_robust_seed0,test,thick_clouds,0.8,2,0.754723,0.891678,0.830904,90,
+fusion_robust_seed0,test,thick_clouds,1.0,0,0.726581,0.880286,0.806247,90,
+fusion_robust_seed0,test,thick_clouds,1.0,1,0.729060,0.885677,0.804798,90,
+fusion_robust_seed0,test,thick_clouds,1.0,2,0.733450,0.884501,0.811136,90,
+fusion_robust_seed0,test,opaque_clouds,0.0,0,0.812953,0.915880,0.878551,90,coverage 0 through the opaque path: checked equal to clean
+fusion_robust_seed0,test,opaque_clouds,0.2,0,0.780465,0.903522,0.851421,90,
+fusion_robust_seed0,test,opaque_clouds,0.2,1,0.783156,0.900082,0.857725,90,
+fusion_robust_seed0,test,opaque_clouds,0.2,2,0.785840,0.906988,0.854720,90,
+fusion_robust_seed0,test,opaque_clouds,0.4,0,0.745394,0.884228,0.826008,90,
+fusion_robust_seed0,test,opaque_clouds,0.4,1,0.753439,0.883851,0.836235,90,
+fusion_robust_seed0,test,opaque_clouds,0.4,2,0.749998,0.881151,0.834405,90,
+fusion_robust_seed0,test,opaque_clouds,0.6,0,0.711692,0.864883,0.800720,90,
+fusion_robust_seed0,test,opaque_clouds,0.6,1,0.715207,0.865725,0.804443,90,
+fusion_robust_seed0,test,opaque_clouds,0.6,2,0.724123,0.871533,0.810650,90,
+fusion_robust_seed0,test,opaque_clouds,0.8,0,0.690092,0.852315,0.783818,90,
+fusion_robust_seed0,test,opaque_clouds,0.8,1,0.687710,0.848306,0.784141,90,
+fusion_robust_seed0,test,opaque_clouds,0.8,2,0.683167,0.845987,0.780201,90,
+fusion_robust_seed0,test,opaque_clouds,1.0,0,0.648686,0.827381,0.750219,90,
+fusion_robust_seed0,test,opaque_clouds,1.0,1,0.650437,0.829801,0.750570,90,
+fusion_robust_seed0,test,opaque_clouds,1.0,2,0.649824,0.828338,0.750953,90,
+fusion_robust_seed0,test,s2_removed,,,0.638516,0.883030,0.697513,90,
+fusion_robust_seed0,test,s1_removed,,,0.804384,0.905537,0.878063,90,
+fusion_robust_seed0,test,real_clouds,0-10%,,0.867086,0.920414,0.937364,54,
+fusion_robust_seed0,test,real_clouds,10-30%,,0.896510,0.946188,0.944677,11,
+fusion_robust_seed0,test,real_clouds,30-60%,,0.632313,0.885054,0.688886,13,
+fusion_robust_seed0,test,real_clouds,60-100%,,0.409089,0.572236,0.589302,11,
+fusion_robust_seed0,test,real_clouds_reliable,0-10%,,0.867086,0.920414,0.937364,54,
+fusion_robust_seed0,test,real_clouds_reliable,10-30%,,0.896510,0.946188,0.944677,11,
+fusion_robust_seed0,test,real_clouds_reliable,30-60%,,0.632313,0.885054,0.688886,13,
+fusion_robust_seed0,test,real_clouds_reliable,60-100%,,0.497195,0.694014,0.636785,9,unreliable: fewer than 10 chips
+fusion_robust_seed1,test,thick_clouds,0.0,,0.806666,0.922948,0.864913,90,coverage 0 = clean (real S2 as acquired)
+fusion_robust_seed1,test,thick_clouds,0.2,0,0.789422,0.918447,0.848929,90,
+fusion_robust_seed1,test,thick_clouds,0.2,1,0.792074,0.919965,0.850694,90,
+fusion_robust_seed1,test,thick_clouds,0.2,2,0.792457,0.919963,0.851137,90,
+fusion_robust_seed1,test,thick_clouds,0.4,0,0.774397,0.912132,0.836823,90,
+fusion_robust_seed1,test,thick_clouds,0.4,1,0.774918,0.910541,0.838777,90,
+fusion_robust_seed1,test,thick_clouds,0.4,2,0.776519,0.911843,0.839547,90,
+fusion_robust_seed1,test,thick_clouds,0.6,0,0.763818,0.909453,0.826686,90,
+fusion_robust_seed1,test,thick_clouds,0.6,1,0.763832,0.908273,0.827680,90,
+fusion_robust_seed1,test,thick_clouds,0.6,2,0.766325,0.908295,0.830589,90,
+fusion_robust_seed1,test,thick_clouds,0.8,0,0.751457,0.904371,0.816322,90,
+fusion_robust_seed1,test,thick_clouds,0.8,1,0.749635,0.899679,0.818013,90,
+fusion_robust_seed1,test,thick_clouds,0.8,2,0.752163,0.901268,0.819705,90,
+fusion_robust_seed1,test,thick_clouds,1.0,0,0.733631,0.891276,0.805739,90,
+fusion_robust_seed1,test,thick_clouds,1.0,1,0.732226,0.893556,0.802198,90,
+fusion_robust_seed1,test,thick_clouds,1.0,2,0.737019,0.893647,0.807880,90,
+fusion_robust_seed1,test,opaque_clouds,0.0,0,0.806666,0.922948,0.864913,90,coverage 0 through the opaque path: checked equal to clean
+fusion_robust_seed1,test,opaque_clouds,0.2,0,0.765166,0.906598,0.830647,90,
+fusion_robust_seed1,test,opaque_clouds,0.2,1,0.774192,0.905375,0.842350,90,
+fusion_robust_seed1,test,opaque_clouds,0.2,2,0.771017,0.908407,0.836008,90,
+fusion_robust_seed1,test,opaque_clouds,0.4,0,0.730241,0.886799,0.805308,90,
+fusion_robust_seed1,test,opaque_clouds,0.4,1,0.737918,0.886077,0.815266,90,
+fusion_robust_seed1,test,opaque_clouds,0.4,2,0.735448,0.885032,0.813132,90,
+fusion_robust_seed1,test,opaque_clouds,0.6,0,0.702018,0.880267,0.776129,90,
+fusion_robust_seed1,test,opaque_clouds,0.6,1,0.699131,0.875862,0.776028,90,
+fusion_robust_seed1,test,opaque_clouds,0.6,2,0.703335,0.873340,0.783228,90,
+fusion_robust_seed1,test,opaque_clouds,0.8,0,0.676070,0.862815,0.757496,90,
+fusion_robust_seed1,test,opaque_clouds,0.8,1,0.667609,0.855123,0.752751,90,
+fusion_robust_seed1,test,opaque_clouds,0.8,2,0.671925,0.859481,0.754849,90,
+fusion_robust_seed1,test,opaque_clouds,1.0,0,0.637609,0.841750,0.724449,90,
+fusion_robust_seed1,test,opaque_clouds,1.0,1,0.636324,0.845682,0.719918,90,
+fusion_robust_seed1,test,opaque_clouds,1.0,2,0.634893,0.845134,0.718481,90,
+fusion_robust_seed1,test,s2_removed,,,0.640826,0.858242,0.716685,90,
+fusion_robust_seed1,test,s1_removed,,,0.812756,0.918900,0.875562,90,
+fusion_robust_seed1,test,real_clouds,0-10%,,0.869469,0.929150,0.931207,54,
+fusion_robust_seed1,test,real_clouds,10-30%,,0.899594,0.955168,0.939253,11,
+fusion_robust_seed1,test,real_clouds,30-60%,,0.584255,0.891814,0.628824,13,
+fusion_robust_seed1,test,real_clouds,60-100%,,0.403310,0.504637,0.667620,11,
+fusion_robust_seed1,test,real_clouds_reliable,0-10%,,0.869469,0.929150,0.931207,54,
+fusion_robust_seed1,test,real_clouds_reliable,10-30%,,0.899594,0.955168,0.939253,11,
+fusion_robust_seed1,test,real_clouds_reliable,30-60%,,0.584255,0.891814,0.628824,13,
+fusion_robust_seed1,test,real_clouds_reliable,60-100%,,0.451944,0.569960,0.685799,9,unreliable: fewer than 10 chips
+fusion_robust_seed2,test,thick_clouds,0.0,,0.812972,0.921871,0.873130,90,coverage 0 = clean (real S2 as acquired)
+fusion_robust_seed2,test,thick_clouds,0.2,0,0.794811,0.919948,0.853867,90,
+fusion_robust_seed2,test,thick_clouds,0.2,1,0.796863,0.924143,0.852633,90,
+fusion_robust_seed2,test,thick_clouds,0.2,2,0.798125,0.922434,0.855543,90,
+fusion_robust_seed2,test,thick_clouds,0.4,0,0.776771,0.917149,0.835390,90,
+fusion_robust_seed2,test,thick_clouds,0.4,1,0.777271,0.913132,0.839335,90,
+fusion_robust_seed2,test,thick_clouds,0.4,2,0.778301,0.916008,0.838113,90,
+fusion_robust_seed2,test,thick_clouds,0.6,0,0.762219,0.912507,0.822316,90,
+fusion_robust_seed2,test,thick_clouds,0.6,1,0.761655,0.912405,0.821743,90,
+fusion_robust_seed2,test,thick_clouds,0.6,2,0.762958,0.911327,0.824139,90,
+fusion_robust_seed2,test,thick_clouds,0.8,0,0.744579,0.903039,0.809279,90,
+fusion_robust_seed2,test,thick_clouds,0.8,1,0.744553,0.901087,0.810821,90,
+fusion_robust_seed2,test,thick_clouds,0.8,2,0.744117,0.901289,0.810141,90,
+fusion_robust_seed2,test,thick_clouds,1.0,0,0.719882,0.889811,0.790337,90,
+fusion_robust_seed2,test,thick_clouds,1.0,1,0.720695,0.891491,0.789994,90,
+fusion_robust_seed2,test,thick_clouds,1.0,2,0.725833,0.891637,0.796055,90,
+fusion_robust_seed2,test,opaque_clouds,0.0,0,0.812972,0.921871,0.873130,90,coverage 0 through the opaque path: checked equal to clean
+fusion_robust_seed2,test,opaque_clouds,0.2,0,0.776963,0.916396,0.836238,90,
+fusion_robust_seed2,test,opaque_clouds,0.2,1,0.781039,0.916741,0.840672,90,
+fusion_robust_seed2,test,opaque_clouds,0.2,2,0.780428,0.919512,0.837651,90,
+fusion_robust_seed2,test,opaque_clouds,0.4,0,0.737416,0.905167,0.799158,90,
+fusion_robust_seed2,test,opaque_clouds,0.4,1,0.747327,0.901907,0.813445,90,
+fusion_robust_seed2,test,opaque_clouds,0.4,2,0.743480,0.902962,0.808042,90,
+fusion_robust_seed2,test,opaque_clouds,0.6,0,0.710676,0.892519,0.777189,90,
+fusion_robust_seed2,test,opaque_clouds,0.6,1,0.708869,0.896035,0.772398,90,
+fusion_robust_seed2,test,opaque_clouds,0.6,2,0.714736,0.895163,0.780030,90,
+fusion_robust_seed2,test,opaque_clouds,0.8,0,0.688089,0.878246,0.760649,90,
+fusion_robust_seed2,test,opaque_clouds,0.8,1,0.683248,0.875653,0.756662,90,
+fusion_robust_seed2,test,opaque_clouds,0.8,2,0.680736,0.875801,0.753474,90,
+fusion_robust_seed2,test,opaque_clouds,1.0,0,0.649887,0.856065,0.729611,90,
+fusion_robust_seed2,test,opaque_clouds,1.0,1,0.644569,0.850453,0.726966,90,
+fusion_robust_seed2,test,opaque_clouds,1.0,2,0.647710,0.852958,0.729123,90,
+fusion_robust_seed2,test,s2_removed,,,0.642888,0.859461,0.718411,90,
+fusion_robust_seed2,test,s1_removed,,,0.816599,0.910164,0.888188,90,
+fusion_robust_seed2,test,real_clouds,0-10%,,0.871523,0.926715,0.936035,54,
+fusion_robust_seed2,test,real_clouds,10-30%,,0.899491,0.957965,0.936453,11,
+fusion_robust_seed2,test,real_clouds,30-60%,,0.617066,0.890776,0.667576,13,
+fusion_robust_seed2,test,real_clouds,60-100%,,0.358833,0.504122,0.554580,11,
+fusion_robust_seed2,test,real_clouds_reliable,0-10%,,0.871523,0.926715,0.936035,54,
+fusion_robust_seed2,test,real_clouds_reliable,10-30%,,0.899491,0.957965,0.936453,11,
+fusion_robust_seed2,test,real_clouds_reliable,30-60%,,0.617066,0.890776,0.667576,13,
+fusion_robust_seed2,test,real_clouds_reliable,60-100%,,0.508668,0.707497,0.644129,9,unreliable: fewer than 10 chips
+fusion_concat_robust,test,thick_clouds,0.0,,0.809482,0.917873,0.872689,90,coverage 0 = clean (real S2 as acquired)
+fusion_concat_robust,test,thick_clouds,0.2,0,0.795771,0.910085,0.863675,90,
+fusion_concat_robust,test,thick_clouds,0.2,1,0.797268,0.912701,0.863085,90,
+fusion_concat_robust,test,thick_clouds,0.2,2,0.797823,0.911453,0.864856,90,
+fusion_concat_robust,test,thick_clouds,0.4,0,0.786256,0.903329,0.858492,90,
+fusion_concat_robust,test,thick_clouds,0.4,1,0.785522,0.899854,0.860772,90,
+fusion_concat_robust,test,thick_clouds,0.4,2,0.784707,0.901577,0.858226,90,
+fusion_concat_robust,test,thick_clouds,0.6,0,0.772135,0.894630,0.849380,90,
+fusion_concat_robust,test,thick_clouds,0.6,1,0.771763,0.891076,0.852155,90,
+fusion_concat_robust,test,thick_clouds,0.6,2,0.774638,0.894607,0.852431,90,
+fusion_concat_robust,test,thick_clouds,0.8,0,0.759590,0.880965,0.846467,90,
+fusion_concat_robust,test,thick_clouds,0.8,1,0.758774,0.875779,0.850286,90,
+fusion_concat_robust,test,thick_clouds,0.8,2,0.760632,0.877287,0.851195,90,
+fusion_concat_robust,test,thick_clouds,1.0,0,0.744015,0.855886,0.850572,90,
+fusion_concat_robust,test,thick_clouds,1.0,1,0.750399,0.865025,0.849915,90,
+fusion_concat_robust,test,thick_clouds,1.0,2,0.750087,0.864245,0.850269,90,
+fusion_concat_robust,test,opaque_clouds,0.0,0,0.809482,0.917873,0.872689,90,coverage 0 through the opaque path: checked equal to clean
+fusion_concat_robust,test,opaque_clouds,0.2,0,0.768322,0.885845,0.852753,90,
+fusion_concat_robust,test,opaque_clouds,0.2,1,0.772557,0.885950,0.857875,90,
+fusion_concat_robust,test,opaque_clouds,0.2,2,0.774913,0.891006,0.856061,90,
+fusion_concat_robust,test,opaque_clouds,0.4,0,0.728320,0.844754,0.840868,90,
+fusion_concat_robust,test,opaque_clouds,0.4,1,0.732424,0.843028,0.848084,90,
+fusion_concat_robust,test,opaque_clouds,0.4,2,0.726506,0.838371,0.844835,90,
+fusion_concat_robust,test,opaque_clouds,0.6,0,0.684695,0.798763,0.827425,90,
+fusion_concat_robust,test,opaque_clouds,0.6,1,0.684907,0.797096,0.829532,90,
+fusion_concat_robust,test,opaque_clouds,0.6,2,0.687965,0.800141,0.830714,90,
+fusion_concat_robust,test,opaque_clouds,0.8,0,0.640142,0.740542,0.825224,90,
+fusion_concat_robust,test,opaque_clouds,0.8,1,0.633191,0.736176,0.819048,90,
+fusion_concat_robust,test,opaque_clouds,0.8,2,0.635042,0.731916,0.827525,90,
+fusion_concat_robust,test,opaque_clouds,1.0,0,0.574558,0.652531,0.827832,90,
+fusion_concat_robust,test,opaque_clouds,1.0,1,0.602793,0.686877,0.831200,90,
+fusion_concat_robust,test,opaque_clouds,1.0,2,0.591332,0.674156,0.827978,90,
+fusion_concat_robust,test,s2_removed,,,0.634978,0.882994,0.693314,90,
+fusion_concat_robust,test,s1_removed,,,0.805602,0.907340,0.877821,90,
+fusion_concat_robust,test,real_clouds,0-10%,,0.867843,0.921892,0.936718,54,
+fusion_concat_robust,test,real_clouds,10-30%,,0.898308,0.950659,0.942239,11,
+fusion_concat_robust,test,real_clouds,30-60%,,0.605444,0.893461,0.652556,13,
+fusion_concat_robust,test,real_clouds,60-100%,,0.418624,0.539767,0.650987,11,
+fusion_concat_robust,test,real_clouds_reliable,0-10%,,0.867843,0.921892,0.936718,54,
+fusion_concat_robust,test,real_clouds_reliable,10-30%,,0.898308,0.950659,0.942239,11,
+fusion_concat_robust,test,real_clouds_reliable,30-60%,,0.605444,0.893461,0.652556,13,
+fusion_concat_robust,test,real_clouds_reliable,60-100%,,0.507183,0.684063,0.662329,9,unreliable: fewer than 10 chips
+s1_only_seed0,bolivia,thick_clouds,0.0,,0.625273,0.834107,0.714075,15,coverage 0 = clean (real S2 as acquired)
+s1_only_seed0,bolivia,thick_clouds,0.2,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,thick_clouds,0.2,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,thick_clouds,0.2,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,thick_clouds,0.4,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,thick_clouds,0.4,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,thick_clouds,0.4,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,thick_clouds,0.6,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,thick_clouds,0.6,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,thick_clouds,0.6,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,thick_clouds,0.8,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,thick_clouds,0.8,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,thick_clouds,0.8,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,thick_clouds,1.0,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,thick_clouds,1.0,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,thick_clouds,1.0,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,0.0,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,0.2,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,0.2,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,0.2,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,0.4,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,0.4,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,0.4,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,0.6,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,0.6,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,0.6,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,0.8,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,0.8,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,0.8,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,1.0,0,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,1.0,1,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,opaque_clouds,1.0,2,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,s2_removed,,,0.625273,0.834107,0.714075,15,unaffected: model has no S2 input (clean result)
+s1_only_seed0,bolivia,s1_removed,,,,,,0,n/a: S1 is the only input
+s1_only_seed0,bolivia,real_clouds,0-10%,,0.708009,0.858820,0.801267,6,unreliable: fewer than 10 chips
+s1_only_seed0,bolivia,real_clouds,10-30%,,0.563920,0.814487,0.647026,4,unreliable: fewer than 10 chips
+s1_only_seed0,bolivia,real_clouds,30-60%,,0.535534,0.797852,0.619606,5,unreliable: fewer than 10 chips
+s1_only_seed0,bolivia,real_clouds,60-100%,,,,,0,no chips
+s1_only_seed1,bolivia,thick_clouds,0.0,,0.706920,0.832825,0.823822,15,coverage 0 = clean (real S2 as acquired)
+s1_only_seed1,bolivia,thick_clouds,0.2,0,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,thick_clouds,0.2,1,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,thick_clouds,0.2,2,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,thick_clouds,0.4,0,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,thick_clouds,0.4,1,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,thick_clouds,0.4,2,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,thick_clouds,0.6,0,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,thick_clouds,0.6,1,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,thick_clouds,0.6,2,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,thick_clouds,0.8,0,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,thick_clouds,0.8,1,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,thick_clouds,0.8,2,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,thick_clouds,1.0,0,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,thick_clouds,1.0,1,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,thick_clouds,1.0,2,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,0.0,0,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,0.2,0,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,0.2,1,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,0.2,2,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,0.4,0,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,0.4,1,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,0.4,2,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,0.6,0,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,0.6,1,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,0.6,2,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,0.8,0,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,0.8,1,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,0.8,2,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,1.0,0,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,1.0,1,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,opaque_clouds,1.0,2,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,s2_removed,,,0.706920,0.832825,0.823822,15,unaffected: model has no S2 input (clean result)
+s1_only_seed1,bolivia,s1_removed,,,,,,0,n/a: S1 is the only input
+s1_only_seed1,bolivia,real_clouds,0-10%,,0.803497,0.873382,0.909434,6,unreliable: fewer than 10 chips
+s1_only_seed1,bolivia,real_clouds,10-30%,,0.617729,0.758907,0.768552,4,unreliable: fewer than 10 chips
+s1_only_seed1,bolivia,real_clouds,30-60%,,0.636945,0.853079,0.715426,5,unreliable: fewer than 10 chips
+s1_only_seed1,bolivia,real_clouds,60-100%,,,,,0,no chips
+s1_only_seed2,bolivia,thick_clouds,0.0,,0.645532,0.858650,0.722286,15,coverage 0 = clean (real S2 as acquired)
+s1_only_seed2,bolivia,thick_clouds,0.2,0,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,thick_clouds,0.2,1,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,thick_clouds,0.2,2,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,thick_clouds,0.4,0,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,thick_clouds,0.4,1,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,thick_clouds,0.4,2,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,thick_clouds,0.6,0,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,thick_clouds,0.6,1,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,thick_clouds,0.6,2,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,thick_clouds,0.8,0,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,thick_clouds,0.8,1,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,thick_clouds,0.8,2,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,thick_clouds,1.0,0,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,thick_clouds,1.0,1,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,thick_clouds,1.0,2,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,0.0,0,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,0.2,0,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,0.2,1,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,0.2,2,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,0.4,0,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,0.4,1,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,0.4,2,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,0.6,0,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,0.6,1,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,0.6,2,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,0.8,0,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,0.8,1,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,0.8,2,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,1.0,0,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,1.0,1,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,opaque_clouds,1.0,2,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,s2_removed,,,0.645532,0.858650,0.722286,15,unaffected: model has no S2 input (clean result)
+s1_only_seed2,bolivia,s1_removed,,,,,,0,n/a: S1 is the only input
+s1_only_seed2,bolivia,real_clouds,0-10%,,0.756077,0.882993,0.840262,6,unreliable: fewer than 10 chips
+s1_only_seed2,bolivia,real_clouds,10-30%,,0.552253,0.836993,0.618807,4,unreliable: fewer than 10 chips
+s1_only_seed2,bolivia,real_clouds,30-60%,,0.541207,0.821466,0.613352,5,unreliable: fewer than 10 chips
+s1_only_seed2,bolivia,real_clouds,60-100%,,,,,0,no chips
 s2_only,bolivia,thick_clouds,0.0,,0.790755,0.895935,0.870731,15,coverage 0 = clean (real S2 as acquired)
 s2_only,bolivia,thick_clouds,0.2,0,0.675526,0.826543,0.787110,15,
 s2_only,bolivia,thick_clouds,0.2,1,0.601841,0.801373,0.707359,15,
@@ -417,44 +815,120 @@ early_fusion,bolivia,real_clouds,0-10%,,0.870240,0.953053,0.909216,6,unreliable:
 early_fusion,bolivia,real_clouds,10-30%,,0.709583,0.890750,0.777225,4,unreliable: fewer than 10 chips
 early_fusion,bolivia,real_clouds,30-60%,,0.748017,0.926085,0.795511,5,unreliable: fewer than 10 chips
 early_fusion,bolivia,real_clouds,60-100%,,,,,0,no chips
-early_fusion_robust,bolivia,thick_clouds,0.0,,0.781762,0.849788,0.907113,15,coverage 0 = clean (real S2 as acquired)
-early_fusion_robust,bolivia,thick_clouds,0.2,0,0.779730,0.868228,0.884390,15,
-early_fusion_robust,bolivia,thick_clouds,0.2,1,0.769636,0.869522,0.870126,15,
-early_fusion_robust,bolivia,thick_clouds,0.2,2,0.768076,0.871450,0.866219,15,
-early_fusion_robust,bolivia,thick_clouds,0.4,0,0.753630,0.869233,0.849999,15,
-early_fusion_robust,bolivia,thick_clouds,0.4,1,0.746350,0.871873,0.838295,15,
-early_fusion_robust,bolivia,thick_clouds,0.4,2,0.768235,0.885304,0.853147,15,
-early_fusion_robust,bolivia,thick_clouds,0.6,0,0.741891,0.887573,0.818840,15,
-early_fusion_robust,bolivia,thick_clouds,0.6,1,0.745914,0.885921,0.825172,15,
-early_fusion_robust,bolivia,thick_clouds,0.6,2,0.750029,0.882606,0.833144,15,
-early_fusion_robust,bolivia,thick_clouds,0.8,0,0.744320,0.896747,0.814089,15,
-early_fusion_robust,bolivia,thick_clouds,0.8,1,0.730300,0.898112,0.796271,15,
-early_fusion_robust,bolivia,thick_clouds,0.8,2,0.737189,0.892856,0.808732,15,
-early_fusion_robust,bolivia,thick_clouds,1.0,0,0.721663,0.914322,0.774005,15,
-early_fusion_robust,bolivia,thick_clouds,1.0,1,0.738215,0.903777,0.801185,15,
-early_fusion_robust,bolivia,thick_clouds,1.0,2,0.737479,0.905685,0.798828,15,
-early_fusion_robust,bolivia,opaque_clouds,0.0,0,0.781762,0.849788,0.907113,15,coverage 0 through the opaque path: checked equal to clean
-early_fusion_robust,bolivia,opaque_clouds,0.2,0,0.738491,0.859319,0.840053,15,
-early_fusion_robust,bolivia,opaque_clouds,0.2,1,0.747512,0.875437,0.836481,15,
-early_fusion_robust,bolivia,opaque_clouds,0.2,2,0.731917,0.863081,0.828065,15,
-early_fusion_robust,bolivia,opaque_clouds,0.4,0,0.682119,0.858724,0.768344,15,
-early_fusion_robust,bolivia,opaque_clouds,0.4,1,0.679271,0.862396,0.761843,15,
-early_fusion_robust,bolivia,opaque_clouds,0.4,2,0.697008,0.874674,0.774341,15,
-early_fusion_robust,bolivia,opaque_clouds,0.6,0,0.579747,0.880186,0.629419,15,
-early_fusion_robust,bolivia,opaque_clouds,0.6,1,0.622552,0.865080,0.689498,15,
-early_fusion_robust,bolivia,opaque_clouds,0.6,2,0.634825,0.887444,0.690415,15,
-early_fusion_robust,bolivia,opaque_clouds,0.8,0,0.597146,0.884974,0.647394,15,
-early_fusion_robust,bolivia,opaque_clouds,0.8,1,0.528869,0.888377,0.566514,15,
-early_fusion_robust,bolivia,opaque_clouds,0.8,2,0.617054,0.883567,0.671669,15,
-early_fusion_robust,bolivia,opaque_clouds,1.0,0,0.414335,0.940492,0.425490,15,
-early_fusion_robust,bolivia,opaque_clouds,1.0,1,0.413012,0.941255,0.423940,15,
-early_fusion_robust,bolivia,opaque_clouds,1.0,2,0.404509,0.935370,0.416140,15,
-early_fusion_robust,bolivia,s2_removed,,,0.525804,0.923694,0.549681,15,
-early_fusion_robust,bolivia,s1_removed,,,0.764073,0.829570,0.906346,15,
-early_fusion_robust,bolivia,real_clouds,0-10%,,0.854912,0.906425,0.937667,6,unreliable: fewer than 10 chips
-early_fusion_robust,bolivia,real_clouds,10-30%,,0.700694,0.784059,0.868250,4,unreliable: fewer than 10 chips
-early_fusion_robust,bolivia,real_clouds,30-60%,,0.756823,0.829060,0.896758,5,unreliable: fewer than 10 chips
-early_fusion_robust,bolivia,real_clouds,60-100%,,,,,0,no chips
+early_fusion_robust_seed0,bolivia,thick_clouds,0.0,,0.781762,0.849788,0.907113,15,coverage 0 = clean (real S2 as acquired)
+early_fusion_robust_seed0,bolivia,thick_clouds,0.2,0,0.779730,0.868228,0.884390,15,
+early_fusion_robust_seed0,bolivia,thick_clouds,0.2,1,0.769636,0.869522,0.870126,15,
+early_fusion_robust_seed0,bolivia,thick_clouds,0.2,2,0.768076,0.871450,0.866219,15,
+early_fusion_robust_seed0,bolivia,thick_clouds,0.4,0,0.753630,0.869233,0.849999,15,
+early_fusion_robust_seed0,bolivia,thick_clouds,0.4,1,0.746350,0.871873,0.838295,15,
+early_fusion_robust_seed0,bolivia,thick_clouds,0.4,2,0.768235,0.885304,0.853147,15,
+early_fusion_robust_seed0,bolivia,thick_clouds,0.6,0,0.741891,0.887573,0.818840,15,
+early_fusion_robust_seed0,bolivia,thick_clouds,0.6,1,0.745914,0.885921,0.825172,15,
+early_fusion_robust_seed0,bolivia,thick_clouds,0.6,2,0.750029,0.882606,0.833144,15,
+early_fusion_robust_seed0,bolivia,thick_clouds,0.8,0,0.744320,0.896747,0.814089,15,
+early_fusion_robust_seed0,bolivia,thick_clouds,0.8,1,0.730300,0.898112,0.796271,15,
+early_fusion_robust_seed0,bolivia,thick_clouds,0.8,2,0.737189,0.892856,0.808732,15,
+early_fusion_robust_seed0,bolivia,thick_clouds,1.0,0,0.721663,0.914322,0.774005,15,
+early_fusion_robust_seed0,bolivia,thick_clouds,1.0,1,0.738215,0.903777,0.801185,15,
+early_fusion_robust_seed0,bolivia,thick_clouds,1.0,2,0.737479,0.905685,0.798828,15,
+early_fusion_robust_seed0,bolivia,opaque_clouds,0.0,0,0.781762,0.849788,0.907113,15,coverage 0 through the opaque path: checked equal to clean
+early_fusion_robust_seed0,bolivia,opaque_clouds,0.2,0,0.738491,0.859319,0.840053,15,
+early_fusion_robust_seed0,bolivia,opaque_clouds,0.2,1,0.747512,0.875437,0.836481,15,
+early_fusion_robust_seed0,bolivia,opaque_clouds,0.2,2,0.731917,0.863081,0.828065,15,
+early_fusion_robust_seed0,bolivia,opaque_clouds,0.4,0,0.682119,0.858724,0.768344,15,
+early_fusion_robust_seed0,bolivia,opaque_clouds,0.4,1,0.679271,0.862396,0.761843,15,
+early_fusion_robust_seed0,bolivia,opaque_clouds,0.4,2,0.697008,0.874674,0.774341,15,
+early_fusion_robust_seed0,bolivia,opaque_clouds,0.6,0,0.579747,0.880186,0.629419,15,
+early_fusion_robust_seed0,bolivia,opaque_clouds,0.6,1,0.622552,0.865080,0.689498,15,
+early_fusion_robust_seed0,bolivia,opaque_clouds,0.6,2,0.634825,0.887444,0.690415,15,
+early_fusion_robust_seed0,bolivia,opaque_clouds,0.8,0,0.597146,0.884974,0.647394,15,
+early_fusion_robust_seed0,bolivia,opaque_clouds,0.8,1,0.528869,0.888377,0.566514,15,
+early_fusion_robust_seed0,bolivia,opaque_clouds,0.8,2,0.617054,0.883567,0.671669,15,
+early_fusion_robust_seed0,bolivia,opaque_clouds,1.0,0,0.414335,0.940492,0.425490,15,
+early_fusion_robust_seed0,bolivia,opaque_clouds,1.0,1,0.413012,0.941255,0.423940,15,
+early_fusion_robust_seed0,bolivia,opaque_clouds,1.0,2,0.404509,0.935370,0.416140,15,
+early_fusion_robust_seed0,bolivia,s2_removed,,,0.525804,0.923694,0.549681,15,
+early_fusion_robust_seed0,bolivia,s1_removed,,,0.764073,0.829570,0.906346,15,
+early_fusion_robust_seed0,bolivia,real_clouds,0-10%,,0.854912,0.906425,0.937667,6,unreliable: fewer than 10 chips
+early_fusion_robust_seed0,bolivia,real_clouds,10-30%,,0.700694,0.784059,0.868250,4,unreliable: fewer than 10 chips
+early_fusion_robust_seed0,bolivia,real_clouds,30-60%,,0.756823,0.829060,0.896758,5,unreliable: fewer than 10 chips
+early_fusion_robust_seed0,bolivia,real_clouds,60-100%,,,,,0,no chips
+early_fusion_robust_seed1,bolivia,thick_clouds,0.0,,0.792995,0.866232,0.903655,15,coverage 0 = clean (real S2 as acquired)
+early_fusion_robust_seed1,bolivia,thick_clouds,0.2,0,0.786426,0.870102,0.891040,15,
+early_fusion_robust_seed1,bolivia,thick_clouds,0.2,1,0.777593,0.868672,0.881184,15,
+early_fusion_robust_seed1,bolivia,thick_clouds,0.2,2,0.779865,0.873141,0.879520,15,
+early_fusion_robust_seed1,bolivia,thick_clouds,0.4,0,0.766001,0.862495,0.872560,15,
+early_fusion_robust_seed1,bolivia,thick_clouds,0.4,1,0.770289,0.872446,0.868046,15,
+early_fusion_robust_seed1,bolivia,thick_clouds,0.4,2,0.772778,0.870505,0.873153,15,
+early_fusion_robust_seed1,bolivia,thick_clouds,0.6,0,0.759358,0.862441,0.864003,15,
+early_fusion_robust_seed1,bolivia,thick_clouds,0.6,1,0.755893,0.869345,0.852771,15,
+early_fusion_robust_seed1,bolivia,thick_clouds,0.6,2,0.757455,0.868117,0.855950,15,
+early_fusion_robust_seed1,bolivia,thick_clouds,0.8,0,0.747904,0.870841,0.841216,15,
+early_fusion_robust_seed1,bolivia,thick_clouds,0.8,1,0.744105,0.872894,0.834529,15,
+early_fusion_robust_seed1,bolivia,thick_clouds,0.8,2,0.737556,0.862816,0.835538,15,
+early_fusion_robust_seed1,bolivia,thick_clouds,1.0,0,0.730593,0.862000,0.827364,15,
+early_fusion_robust_seed1,bolivia,thick_clouds,1.0,1,0.734619,0.860565,0.833873,15,
+early_fusion_robust_seed1,bolivia,thick_clouds,1.0,2,0.739042,0.861283,0.838895,15,
+early_fusion_robust_seed1,bolivia,opaque_clouds,0.0,0,0.792995,0.866232,0.903655,15,coverage 0 through the opaque path: checked equal to clean
+early_fusion_robust_seed1,bolivia,opaque_clouds,0.2,0,0.767590,0.876088,0.861073,15,
+early_fusion_robust_seed1,bolivia,opaque_clouds,0.2,1,0.758918,0.879500,0.846987,15,
+early_fusion_robust_seed1,bolivia,opaque_clouds,0.2,2,0.754949,0.878000,0.843426,15,
+early_fusion_robust_seed1,bolivia,opaque_clouds,0.4,0,0.722788,0.871179,0.809284,15,
+early_fusion_robust_seed1,bolivia,opaque_clouds,0.4,1,0.728872,0.878397,0.810671,15,
+early_fusion_robust_seed1,bolivia,opaque_clouds,0.4,2,0.738027,0.889782,0.812287,15,
+early_fusion_robust_seed1,bolivia,opaque_clouds,0.6,0,0.687989,0.884581,0.755839,15,
+early_fusion_robust_seed1,bolivia,opaque_clouds,0.6,1,0.701720,0.888999,0.769107,15,
+early_fusion_robust_seed1,bolivia,opaque_clouds,0.6,2,0.692932,0.888152,0.759181,15,
+early_fusion_robust_seed1,bolivia,opaque_clouds,0.8,0,0.662686,0.893786,0.719334,15,
+early_fusion_robust_seed1,bolivia,opaque_clouds,0.8,1,0.668149,0.900461,0.721433,15,
+early_fusion_robust_seed1,bolivia,opaque_clouds,0.8,2,0.664124,0.885255,0.726679,15,
+early_fusion_robust_seed1,bolivia,opaque_clouds,1.0,0,0.631839,0.897777,0.680819,15,
+early_fusion_robust_seed1,bolivia,opaque_clouds,1.0,1,0.642806,0.901898,0.691130,15,
+early_fusion_robust_seed1,bolivia,opaque_clouds,1.0,2,0.634317,0.901039,0.681817,15,
+early_fusion_robust_seed1,bolivia,s2_removed,,,0.502944,0.927605,0.523493,15,
+early_fusion_robust_seed1,bolivia,s1_removed,,,0.775854,0.864555,0.883207,15,
+early_fusion_robust_seed1,bolivia,real_clouds,0-10%,,0.869382,0.925706,0.934592,6,unreliable: fewer than 10 chips
+early_fusion_robust_seed1,bolivia,real_clouds,10-30%,,0.712536,0.799076,0.868061,4,unreliable: fewer than 10 chips
+early_fusion_robust_seed1,bolivia,real_clouds,30-60%,,0.760979,0.842123,0.887609,5,unreliable: fewer than 10 chips
+early_fusion_robust_seed1,bolivia,real_clouds,60-100%,,,,,0,no chips
+early_fusion_robust_seed2,bolivia,thick_clouds,0.0,,0.762993,0.877909,0.853565,15,coverage 0 = clean (real S2 as acquired)
+early_fusion_robust_seed2,bolivia,thick_clouds,0.2,0,0.751816,0.889389,0.829362,15,
+early_fusion_robust_seed2,bolivia,thick_clouds,0.2,1,0.745762,0.880917,0.829373,15,
+early_fusion_robust_seed2,bolivia,thick_clouds,0.2,2,0.746836,0.889663,0.823072,15,
+early_fusion_robust_seed2,bolivia,thick_clouds,0.4,0,0.737448,0.887328,0.813637,15,
+early_fusion_robust_seed2,bolivia,thick_clouds,0.4,1,0.724973,0.887105,0.798659,15,
+early_fusion_robust_seed2,bolivia,thick_clouds,0.4,2,0.728559,0.900153,0.792613,15,
+early_fusion_robust_seed2,bolivia,thick_clouds,0.6,0,0.714536,0.894393,0.780376,15,
+early_fusion_robust_seed2,bolivia,thick_clouds,0.6,1,0.709128,0.892105,0.775652,15,
+early_fusion_robust_seed2,bolivia,thick_clouds,0.6,2,0.725971,0.889114,0.798243,15,
+early_fusion_robust_seed2,bolivia,thick_clouds,0.8,0,0.721865,0.896459,0.787526,15,
+early_fusion_robust_seed2,bolivia,thick_clouds,0.8,1,0.692146,0.892857,0.754841,15,
+early_fusion_robust_seed2,bolivia,thick_clouds,0.8,2,0.721344,0.889060,0.792696,15,
+early_fusion_robust_seed2,bolivia,thick_clouds,1.0,0,0.642827,0.917530,0.682246,15,
+early_fusion_robust_seed2,bolivia,thick_clouds,1.0,1,0.706122,0.897796,0.767845,15,
+early_fusion_robust_seed2,bolivia,thick_clouds,1.0,2,0.680008,0.903947,0.732971,15,
+early_fusion_robust_seed2,bolivia,opaque_clouds,0.0,0,0.762993,0.877909,0.853565,15,coverage 0 through the opaque path: checked equal to clean
+early_fusion_robust_seed2,bolivia,opaque_clouds,0.2,0,0.713428,0.885836,0.785666,15,
+early_fusion_robust_seed2,bolivia,opaque_clouds,0.2,1,0.726309,0.894157,0.794627,15,
+early_fusion_robust_seed2,bolivia,opaque_clouds,0.2,2,0.707402,0.886691,0.777705,15,
+early_fusion_robust_seed2,bolivia,opaque_clouds,0.4,0,0.661154,0.883649,0.724199,15,
+early_fusion_robust_seed2,bolivia,opaque_clouds,0.4,1,0.649743,0.881630,0.711841,15,
+early_fusion_robust_seed2,bolivia,opaque_clouds,0.4,2,0.665955,0.898594,0.720070,15,
+early_fusion_robust_seed2,bolivia,opaque_clouds,0.6,0,0.551141,0.894383,0.589508,15,
+early_fusion_robust_seed2,bolivia,opaque_clouds,0.6,1,0.578474,0.886521,0.624734,15,
+early_fusion_robust_seed2,bolivia,opaque_clouds,0.6,2,0.604065,0.903674,0.645637,15,
+early_fusion_robust_seed2,bolivia,opaque_clouds,0.8,0,0.560378,0.896505,0.599137,15,
+early_fusion_robust_seed2,bolivia,opaque_clouds,0.8,1,0.485776,0.900730,0.513255,15,
+early_fusion_robust_seed2,bolivia,opaque_clouds,0.8,2,0.593804,0.896311,0.637604,15,
+early_fusion_robust_seed2,bolivia,opaque_clouds,1.0,0,0.335456,0.958108,0.340449,15,
+early_fusion_robust_seed2,bolivia,opaque_clouds,1.0,1,0.353056,0.958462,0.358542,15,
+early_fusion_robust_seed2,bolivia,opaque_clouds,1.0,2,0.330423,0.950182,0.336248,15,
+early_fusion_robust_seed2,bolivia,s2_removed,,,0.365775,0.898804,0.381485,15,
+early_fusion_robust_seed2,bolivia,s1_removed,,,0.720767,0.909908,0.776157,15,
+early_fusion_robust_seed2,bolivia,real_clouds,0-10%,,0.867447,0.925827,0.932233,6,unreliable: fewer than 10 chips
+early_fusion_robust_seed2,bolivia,real_clouds,10-30%,,0.657670,0.812060,0.775745,4,unreliable: fewer than 10 chips
+early_fusion_robust_seed2,bolivia,real_clouds,30-60%,,0.704846,0.862609,0.793981,5,unreliable: fewer than 10 chips
+early_fusion_robust_seed2,bolivia,real_clouds,60-100%,,,,,0,no chips
 fusion,bolivia,thick_clouds,0.0,,0.797093,0.904018,0.870788,15,coverage 0 = clean (real S2 as acquired)
 fusion,bolivia,thick_clouds,0.2,0,0.766454,0.885605,0.850674,15,
 fusion,bolivia,thick_clouds,0.2,1,0.709465,0.855704,0.805876,15,
@@ -493,41 +967,155 @@ fusion,bolivia,real_clouds,0-10%,,0.877018,0.939816,0.929204,6,unreliable: fewer
 fusion,bolivia,real_clouds,10-30%,,0.709432,0.841535,0.818817,4,unreliable: fewer than 10 chips
 fusion,bolivia,real_clouds,30-60%,,0.761381,0.916751,0.817934,5,unreliable: fewer than 10 chips
 fusion,bolivia,real_clouds,60-100%,,,,,0,no chips
-fusion_robust,bolivia,thick_clouds,0.0,,0.791603,0.855274,0.914040,15,coverage 0 = clean (real S2 as acquired)
-fusion_robust,bolivia,thick_clouds,0.2,0,0.789102,0.868488,0.896189,15,
-fusion_robust,bolivia,thick_clouds,0.2,1,0.786712,0.867108,0.894571,15,
-fusion_robust,bolivia,thick_clouds,0.2,2,0.781643,0.868427,0.886643,15,
-fusion_robust,bolivia,thick_clouds,0.4,0,0.776816,0.867380,0.881516,15,
-fusion_robust,bolivia,thick_clouds,0.4,1,0.776312,0.871099,0.877064,15,
-fusion_robust,bolivia,thick_clouds,0.4,2,0.776901,0.869286,0.879665,15,
-fusion_robust,bolivia,thick_clouds,0.6,0,0.752387,0.868700,0.848926,15,
-fusion_robust,bolivia,thick_clouds,0.6,1,0.764496,0.872352,0.860789,15,
-fusion_robust,bolivia,thick_clouds,0.6,2,0.763734,0.877278,0.855091,15,
-fusion_robust,bolivia,thick_clouds,0.8,0,0.748580,0.880394,0.833328,15,
-fusion_robust,bolivia,thick_clouds,0.8,1,0.741260,0.886104,0.819324,15,
-fusion_robust,bolivia,thick_clouds,0.8,2,0.758362,0.873818,0.851624,15,
-fusion_robust,bolivia,thick_clouds,1.0,0,0.725771,0.887912,0.798973,15,
-fusion_robust,bolivia,thick_clouds,1.0,1,0.729891,0.888872,0.803183,15,
-fusion_robust,bolivia,thick_clouds,1.0,2,0.727739,0.887794,0.801455,15,
-fusion_robust,bolivia,opaque_clouds,0.0,0,0.791603,0.855274,0.914040,15,coverage 0 through the opaque path: checked equal to clean
-fusion_robust,bolivia,opaque_clouds,0.2,0,0.768251,0.864731,0.873188,15,
-fusion_robust,bolivia,opaque_clouds,0.2,1,0.773194,0.866913,0.877333,15,
-fusion_robust,bolivia,opaque_clouds,0.2,2,0.758573,0.861919,0.863511,15,
-fusion_robust,bolivia,opaque_clouds,0.4,0,0.741265,0.860294,0.842707,15,
-fusion_robust,bolivia,opaque_clouds,0.4,1,0.735719,0.863170,0.832851,15,
-fusion_robust,bolivia,opaque_clouds,0.4,2,0.745057,0.871326,0.837169,15,
-fusion_robust,bolivia,opaque_clouds,0.6,0,0.683204,0.862591,0.766640,15,
-fusion_robust,bolivia,opaque_clouds,0.6,1,0.707372,0.864438,0.795631,15,
-fusion_robust,bolivia,opaque_clouds,0.6,2,0.695992,0.870864,0.776089,15,
-fusion_robust,bolivia,opaque_clouds,0.8,0,0.677758,0.869368,0.754608,15,
-fusion_robust,bolivia,opaque_clouds,0.8,1,0.661006,0.873945,0.730669,15,
-fusion_robust,bolivia,opaque_clouds,0.8,2,0.691745,0.862524,0.777465,15,
-fusion_robust,bolivia,opaque_clouds,1.0,0,0.617800,0.875656,0.677211,15,
-fusion_robust,bolivia,opaque_clouds,1.0,1,0.618236,0.879808,0.675268,15,
-fusion_robust,bolivia,opaque_clouds,1.0,2,0.616703,0.878160,0.674408,15,
-fusion_robust,bolivia,s2_removed,,,0.401426,0.895253,0.421209,15,
-fusion_robust,bolivia,s1_removed,,,0.763705,0.816344,0.922142,15,
-fusion_robust,bolivia,real_clouds,0-10%,,0.858427,0.897579,0.951644,6,unreliable: fewer than 10 chips
-fusion_robust,bolivia,real_clouds,10-30%,,0.723572,0.810292,0.871148,4,unreliable: fewer than 10 chips
-fusion_robust,bolivia,real_clouds,30-60%,,0.754998,0.829240,0.893988,5,unreliable: fewer than 10 chips
-fusion_robust,bolivia,real_clouds,60-100%,,,,,0,no chips
+fusion_robust_seed0,bolivia,thick_clouds,0.0,,0.791603,0.855274,0.914040,15,coverage 0 = clean (real S2 as acquired)
+fusion_robust_seed0,bolivia,thick_clouds,0.2,0,0.789102,0.868488,0.896189,15,
+fusion_robust_seed0,bolivia,thick_clouds,0.2,1,0.786712,0.867108,0.894571,15,
+fusion_robust_seed0,bolivia,thick_clouds,0.2,2,0.781643,0.868427,0.886643,15,
+fusion_robust_seed0,bolivia,thick_clouds,0.4,0,0.776816,0.867380,0.881516,15,
+fusion_robust_seed0,bolivia,thick_clouds,0.4,1,0.776312,0.871099,0.877064,15,
+fusion_robust_seed0,bolivia,thick_clouds,0.4,2,0.776901,0.869286,0.879665,15,
+fusion_robust_seed0,bolivia,thick_clouds,0.6,0,0.752387,0.868700,0.848926,15,
+fusion_robust_seed0,bolivia,thick_clouds,0.6,1,0.764496,0.872352,0.860789,15,
+fusion_robust_seed0,bolivia,thick_clouds,0.6,2,0.763734,0.877278,0.855091,15,
+fusion_robust_seed0,bolivia,thick_clouds,0.8,0,0.748580,0.880394,0.833328,15,
+fusion_robust_seed0,bolivia,thick_clouds,0.8,1,0.741260,0.886104,0.819324,15,
+fusion_robust_seed0,bolivia,thick_clouds,0.8,2,0.758362,0.873818,0.851624,15,
+fusion_robust_seed0,bolivia,thick_clouds,1.0,0,0.725771,0.887912,0.798973,15,
+fusion_robust_seed0,bolivia,thick_clouds,1.0,1,0.729891,0.888872,0.803183,15,
+fusion_robust_seed0,bolivia,thick_clouds,1.0,2,0.727739,0.887794,0.801455,15,
+fusion_robust_seed0,bolivia,opaque_clouds,0.0,0,0.791603,0.855274,0.914040,15,coverage 0 through the opaque path: checked equal to clean
+fusion_robust_seed0,bolivia,opaque_clouds,0.2,0,0.768251,0.864731,0.873188,15,
+fusion_robust_seed0,bolivia,opaque_clouds,0.2,1,0.773194,0.866913,0.877333,15,
+fusion_robust_seed0,bolivia,opaque_clouds,0.2,2,0.758573,0.861919,0.863511,15,
+fusion_robust_seed0,bolivia,opaque_clouds,0.4,0,0.741265,0.860294,0.842707,15,
+fusion_robust_seed0,bolivia,opaque_clouds,0.4,1,0.735719,0.863170,0.832851,15,
+fusion_robust_seed0,bolivia,opaque_clouds,0.4,2,0.745057,0.871326,0.837169,15,
+fusion_robust_seed0,bolivia,opaque_clouds,0.6,0,0.683204,0.862591,0.766640,15,
+fusion_robust_seed0,bolivia,opaque_clouds,0.6,1,0.707372,0.864438,0.795631,15,
+fusion_robust_seed0,bolivia,opaque_clouds,0.6,2,0.695992,0.870864,0.776089,15,
+fusion_robust_seed0,bolivia,opaque_clouds,0.8,0,0.677758,0.869368,0.754608,15,
+fusion_robust_seed0,bolivia,opaque_clouds,0.8,1,0.661006,0.873945,0.730669,15,
+fusion_robust_seed0,bolivia,opaque_clouds,0.8,2,0.691745,0.862524,0.777465,15,
+fusion_robust_seed0,bolivia,opaque_clouds,1.0,0,0.617800,0.875656,0.677211,15,
+fusion_robust_seed0,bolivia,opaque_clouds,1.0,1,0.618236,0.879808,0.675268,15,
+fusion_robust_seed0,bolivia,opaque_clouds,1.0,2,0.616703,0.878160,0.674408,15,
+fusion_robust_seed0,bolivia,s2_removed,,,0.401426,0.895253,0.421209,15,
+fusion_robust_seed0,bolivia,s1_removed,,,0.763705,0.816344,0.922142,15,
+fusion_robust_seed0,bolivia,real_clouds,0-10%,,0.858427,0.897579,0.951644,6,unreliable: fewer than 10 chips
+fusion_robust_seed0,bolivia,real_clouds,10-30%,,0.723572,0.810292,0.871148,4,unreliable: fewer than 10 chips
+fusion_robust_seed0,bolivia,real_clouds,30-60%,,0.754998,0.829240,0.893988,5,unreliable: fewer than 10 chips
+fusion_robust_seed0,bolivia,real_clouds,60-100%,,,,,0,no chips
+fusion_robust_seed1,bolivia,thick_clouds,0.0,,0.803256,0.906070,0.876220,15,coverage 0 = clean (real S2 as acquired)
+fusion_robust_seed1,bolivia,thick_clouds,0.2,0,0.793319,0.906137,0.864348,15,
+fusion_robust_seed1,bolivia,thick_clouds,0.2,1,0.791683,0.903739,0.864590,15,
+fusion_robust_seed1,bolivia,thick_clouds,0.2,2,0.790374,0.906062,0.860921,15,
+fusion_robust_seed1,bolivia,thick_clouds,0.4,0,0.776149,0.899233,0.850085,15,
+fusion_robust_seed1,bolivia,thick_clouds,0.4,1,0.769133,0.906051,0.835788,15,
+fusion_robust_seed1,bolivia,thick_clouds,0.4,2,0.773288,0.901475,0.844677,15,
+fusion_robust_seed1,bolivia,thick_clouds,0.6,0,0.742257,0.896723,0.811643,15,
+fusion_robust_seed1,bolivia,thick_clouds,0.6,1,0.743770,0.879861,0.827843,15,
+fusion_robust_seed1,bolivia,thick_clouds,0.6,2,0.742844,0.905019,0.805654,15,
+fusion_robust_seed1,bolivia,thick_clouds,0.8,0,0.744443,0.878031,0.830308,15,
+fusion_robust_seed1,bolivia,thick_clouds,0.8,1,0.723432,0.891599,0.793198,15,
+fusion_robust_seed1,bolivia,thick_clouds,0.8,2,0.761068,0.890450,0.839691,15,
+fusion_robust_seed1,bolivia,thick_clouds,1.0,0,0.713057,0.890842,0.781324,15,
+fusion_robust_seed1,bolivia,thick_clouds,1.0,1,0.707392,0.884429,0.779442,15,
+fusion_robust_seed1,bolivia,thick_clouds,1.0,2,0.721488,0.895924,0.787490,15,
+fusion_robust_seed1,bolivia,opaque_clouds,0.0,0,0.803256,0.906070,0.876220,15,coverage 0 through the opaque path: checked equal to clean
+fusion_robust_seed1,bolivia,opaque_clouds,0.2,0,0.765949,0.891242,0.844923,15,
+fusion_robust_seed1,bolivia,opaque_clouds,0.2,1,0.775651,0.892722,0.855381,15,
+fusion_robust_seed1,bolivia,opaque_clouds,0.2,2,0.767053,0.893317,0.844404,15,
+fusion_robust_seed1,bolivia,opaque_clouds,0.4,0,0.736083,0.884872,0.814043,15,
+fusion_robust_seed1,bolivia,opaque_clouds,0.4,1,0.714442,0.884914,0.787624,15,
+fusion_robust_seed1,bolivia,opaque_clouds,0.4,2,0.728517,0.888026,0.802209,15,
+fusion_robust_seed1,bolivia,opaque_clouds,0.6,0,0.659027,0.890718,0.717001,15,
+fusion_robust_seed1,bolivia,opaque_clouds,0.6,1,0.672030,0.864819,0.750910,15,
+fusion_robust_seed1,bolivia,opaque_clouds,0.6,2,0.677423,0.884438,0.743207,15,
+fusion_robust_seed1,bolivia,opaque_clouds,0.8,0,0.651329,0.861687,0.727373,15,
+fusion_robust_seed1,bolivia,opaque_clouds,0.8,1,0.604299,0.877686,0.659870,15,
+fusion_robust_seed1,bolivia,opaque_clouds,0.8,2,0.662274,0.871869,0.733683,15,
+fusion_robust_seed1,bolivia,opaque_clouds,1.0,0,0.566809,0.904484,0.602897,15,
+fusion_robust_seed1,bolivia,opaque_clouds,1.0,1,0.547599,0.888414,0.588044,15,
+fusion_robust_seed1,bolivia,opaque_clouds,1.0,2,0.574494,0.902621,0.612453,15,
+fusion_robust_seed1,bolivia,s2_removed,,,0.519530,0.912110,0.546909,15,
+fusion_robust_seed1,bolivia,s1_removed,,,0.775841,0.843335,0.906491,15,
+fusion_robust_seed1,bolivia,real_clouds,0-10%,,0.871932,0.936075,0.927138,6,unreliable: fewer than 10 chips
+fusion_robust_seed1,bolivia,real_clouds,10-30%,,0.732642,0.861913,0.830073,4,unreliable: fewer than 10 chips
+fusion_robust_seed1,bolivia,real_clouds,30-60%,,0.763046,0.902729,0.831404,5,unreliable: fewer than 10 chips
+fusion_robust_seed1,bolivia,real_clouds,60-100%,,,,,0,no chips
+fusion_robust_seed2,bolivia,thick_clouds,0.0,,0.790698,0.908517,0.859099,15,coverage 0 = clean (real S2 as acquired)
+fusion_robust_seed2,bolivia,thick_clouds,0.2,0,0.770065,0.917236,0.827568,15,
+fusion_robust_seed2,bolivia,thick_clouds,0.2,1,0.766949,0.919688,0.822002,15,
+fusion_robust_seed2,bolivia,thick_clouds,0.2,2,0.758735,0.914241,0.816873,15,
+fusion_robust_seed2,bolivia,thick_clouds,0.4,0,0.755372,0.915732,0.811801,15,
+fusion_robust_seed2,bolivia,thick_clouds,0.4,1,0.742652,0.912796,0.799366,15,
+fusion_robust_seed2,bolivia,thick_clouds,0.4,2,0.745356,0.921979,0.795534,15,
+fusion_robust_seed2,bolivia,thick_clouds,0.6,0,0.713978,0.910401,0.767939,15,
+fusion_robust_seed2,bolivia,thick_clouds,0.6,1,0.714655,0.913180,0.766752,15,
+fusion_robust_seed2,bolivia,thick_clouds,0.6,2,0.714693,0.911512,0.767977,15,
+fusion_robust_seed2,bolivia,thick_clouds,0.8,0,0.701550,0.911570,0.752781,15,
+fusion_robust_seed2,bolivia,thick_clouds,0.8,1,0.691063,0.911839,0.740542,15,
+fusion_robust_seed2,bolivia,thick_clouds,0.8,2,0.700043,0.910930,0.751482,15,
+fusion_robust_seed2,bolivia,thick_clouds,1.0,0,0.660406,0.905999,0.708986,15,
+fusion_robust_seed2,bolivia,thick_clouds,1.0,1,0.676288,0.906046,0.727292,15,
+fusion_robust_seed2,bolivia,thick_clouds,1.0,2,0.673274,0.905128,0.724395,15,
+fusion_robust_seed2,bolivia,opaque_clouds,0.0,0,0.790698,0.908517,0.859099,15,coverage 0 through the opaque path: checked equal to clean
+fusion_robust_seed2,bolivia,opaque_clouds,0.2,0,0.744153,0.918996,0.796390,15,
+fusion_robust_seed2,bolivia,opaque_clouds,0.2,1,0.738121,0.925312,0.784883,15,
+fusion_robust_seed2,bolivia,opaque_clouds,0.2,2,0.724335,0.916632,0.775419,15,
+fusion_robust_seed2,bolivia,opaque_clouds,0.4,0,0.698055,0.917353,0.744902,15,
+fusion_robust_seed2,bolivia,opaque_clouds,0.4,1,0.686452,0.911206,0.735662,15,
+fusion_robust_seed2,bolivia,opaque_clouds,0.4,2,0.693601,0.926412,0.734044,15,
+fusion_robust_seed2,bolivia,opaque_clouds,0.6,0,0.635398,0.912470,0.676640,15,
+fusion_robust_seed2,bolivia,opaque_clouds,0.6,1,0.636865,0.910903,0.679172,15,
+fusion_robust_seed2,bolivia,opaque_clouds,0.6,2,0.649505,0.911402,0.693278,15,
+fusion_robust_seed2,bolivia,opaque_clouds,0.8,0,0.603663,0.907550,0.643216,15,
+fusion_robust_seed2,bolivia,opaque_clouds,0.8,1,0.604595,0.908374,0.643861,15,
+fusion_robust_seed2,bolivia,opaque_clouds,0.8,2,0.603966,0.909043,0.642812,15,
+fusion_robust_seed2,bolivia,opaque_clouds,1.0,0,0.553615,0.904280,0.588077,15,
+fusion_robust_seed2,bolivia,opaque_clouds,1.0,1,0.562126,0.900794,0.599223,15,
+fusion_robust_seed2,bolivia,opaque_clouds,1.0,2,0.553185,0.901876,0.588611,15,
+fusion_robust_seed2,bolivia,s2_removed,,,0.585557,0.904868,0.623969,15,
+fusion_robust_seed2,bolivia,s1_removed,,,0.770288,0.828740,0.916116,15,
+fusion_robust_seed2,bolivia,real_clouds,0-10%,,0.868962,0.929246,0.930530,6,unreliable: fewer than 10 chips
+fusion_robust_seed2,bolivia,real_clouds,10-30%,,0.709404,0.871925,0.791925,4,unreliable: fewer than 10 chips
+fusion_robust_seed2,bolivia,real_clouds,30-60%,,0.742545,0.912028,0.799833,5,unreliable: fewer than 10 chips
+fusion_robust_seed2,bolivia,real_clouds,60-100%,,,,,0,no chips
+fusion_concat_robust,bolivia,thick_clouds,0.0,,0.801723,0.864706,0.916716,15,coverage 0 = clean (real S2 as acquired)
+fusion_concat_robust,bolivia,thick_clouds,0.2,0,0.792403,0.864690,0.904567,15,
+fusion_concat_robust,bolivia,thick_clouds,0.2,1,0.790935,0.865735,0.901520,15,
+fusion_concat_robust,bolivia,thick_clouds,0.2,2,0.786233,0.862062,0.899379,15,
+fusion_concat_robust,bolivia,thick_clouds,0.4,0,0.772819,0.853647,0.890853,15,
+fusion_concat_robust,bolivia,thick_clouds,0.4,1,0.780120,0.860382,0.893192,15,
+fusion_concat_robust,bolivia,thick_clouds,0.4,2,0.779162,0.860748,0.891543,15,
+fusion_concat_robust,bolivia,thick_clouds,0.6,0,0.758416,0.842555,0.883649,15,
+fusion_concat_robust,bolivia,thick_clouds,0.6,1,0.769090,0.851814,0.887885,15,
+fusion_concat_robust,bolivia,thick_clouds,0.6,2,0.760727,0.857287,0.871034,15,
+fusion_concat_robust,bolivia,thick_clouds,0.8,0,0.751793,0.835275,0.882657,15,
+fusion_concat_robust,bolivia,thick_clouds,0.8,1,0.758741,0.847169,0.879067,15,
+fusion_concat_robust,bolivia,thick_clouds,0.8,2,0.760635,0.845665,0.883244,15,
+fusion_concat_robust,bolivia,thick_clouds,1.0,0,0.745179,0.814426,0.897585,15,
+fusion_concat_robust,bolivia,thick_clouds,1.0,1,0.747051,0.832831,0.878832,15,
+fusion_concat_robust,bolivia,thick_clouds,1.0,2,0.750514,0.831036,0.885658,15,
+fusion_concat_robust,bolivia,opaque_clouds,0.0,0,0.801723,0.864706,0.916716,15,coverage 0 through the opaque path: checked equal to clean
+fusion_concat_robust,bolivia,opaque_clouds,0.2,0,0.770440,0.856222,0.884926,15,
+fusion_concat_robust,bolivia,opaque_clouds,0.2,1,0.773289,0.858732,0.885999,15,
+fusion_concat_robust,bolivia,opaque_clouds,0.2,2,0.761176,0.852118,0.877031,15,
+fusion_concat_robust,bolivia,opaque_clouds,0.4,0,0.729048,0.825546,0.861822,15,
+fusion_concat_robust,bolivia,opaque_clouds,0.4,1,0.738399,0.840435,0.858795,15,
+fusion_concat_robust,bolivia,opaque_clouds,0.4,2,0.730799,0.835134,0.854005,15,
+fusion_concat_robust,bolivia,opaque_clouds,0.6,0,0.680042,0.791000,0.828997,15,
+fusion_concat_robust,bolivia,opaque_clouds,0.6,1,0.708804,0.809827,0.850344,15,
+fusion_concat_robust,bolivia,opaque_clouds,0.6,2,0.691447,0.812955,0.822259,15,
+fusion_concat_robust,bolivia,opaque_clouds,0.8,0,0.672261,0.774056,0.836384,15,
+fusion_concat_robust,bolivia,opaque_clouds,0.8,1,0.677835,0.774108,0.844969,15,
+fusion_concat_robust,bolivia,opaque_clouds,0.8,2,0.685408,0.785063,0.843738,15,
+fusion_concat_robust,bolivia,opaque_clouds,1.0,0,0.642817,0.714600,0.864852,15,
+fusion_concat_robust,bolivia,opaque_clouds,1.0,1,0.633186,0.735706,0.819621,15,
+fusion_concat_robust,bolivia,opaque_clouds,1.0,2,0.653421,0.745837,0.840596,15,
+fusion_concat_robust,bolivia,s2_removed,,,0.490734,0.879679,0.526043,15,
+fusion_concat_robust,bolivia,s1_removed,,,0.761307,0.811068,0.925422,15,
+fusion_concat_robust,bolivia,real_clouds,0-10%,,0.865265,0.908737,0.947610,6,unreliable: fewer than 10 chips
+fusion_concat_robust,bolivia,real_clouds,10-30%,,0.726393,0.805260,0.881190,4,unreliable: fewer than 10 chips
+fusion_concat_robust,bolivia,real_clouds,30-60%,,0.784875,0.859255,0.900666,5,unreliable: fewer than 10 chips
+fusion_concat_robust,bolivia,real_clouds,60-100%,,,,,0,no chips

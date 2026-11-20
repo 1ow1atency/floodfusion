@@ -3,9 +3,6 @@
 Cloud-robust flood mapping by fusing Sentinel-1 SAR and Sentinel-2 optical imagery with deep
 learning (Sen1Floods11).
 
-> **Interim README.** Work in progress: every result so far is from a single training seed.
-> Multi-seed runs are underway; final results will replace the tables below.
-
 ## What this project is
 
 Floods are mapped from satellites, but ordinary (optical) satellite photos cannot see through
@@ -32,30 +29,71 @@ flowchart LR
     F --> D["decoder"] --> M["flood map<br/>water / not water"]
 ```
 
-## Key result (training seed 0, preliminary)
+## Key result
 
 **Under fully opaque synthetic clouds on the test split, the robust two-encoder model
-(`fusion_robust`) is the most accurate of all seven models at every coverage from 20% to 80%,
-and at 100% cloud it is level with radar-only — while the optical-only model collapses.**
-
-*(figure pending: copy `results/iou_vs_coverage_test.png` from Drive into
-`docs/figures/iou_vs_coverage_test.png` — the line below will then render)*
+(`fusion_robust`) is the most accurate of every model that uses the optical image at each
+coverage from 40% to 100%, and its lead over early fusion widens as the cloud thickens —
+while the optical-only model collapses.**
 
 ![Water IoU vs synthetic cloud coverage, test split](docs/figures/iou_vs_coverage_test.png)
 
 Water IoU (intersection-over-union of the water class) on the 90 test chips under **opaque**
-synthetic clouds, averaged over 3 cloud layouts. **Training seed 0 — preliminary** (source:
-[docs/results/](docs/results/)):
+synthetic clouds. Source: [docs/results/](docs/results/) (`robustness_by_model.csv`),
+14 runs over 8 configurations.
 
-| model | clear sky | 40% cloud | 80% cloud | 100% cloud |
-|---|--:|--:|--:|--:|
-| s1_only (radar only) | 0.657 | 0.657 | 0.657 | 0.657 |
-| s2_only_robust (optical only) | 0.821 | 0.526 | 0.215 | 0.064 |
-| early_fusion_robust (channels stacked) | 0.819 | 0.730 | 0.616 | 0.530 |
-| **fusion_robust (two encoders + cross-attention)** | 0.813 | **0.750** | **0.687** | 0.650 |
+| model | seeds | clear sky | 40% cloud | 60% cloud | 80% cloud | 100% cloud |
+|---|--:|--:|--:|--:|--:|--:|
+| `s1_only` (radar only) | 3 | 0.656 ± 0.004 | 0.656 ± 0.004 | 0.656 ± 0.004 | 0.656 ± 0.004 | 0.656 ± 0.004 |
+| `s2_only_robust` (optical only) | 1 | 0.821 | 0.526 ± 0.016 | 0.383 ± 0.030 | 0.215 ± 0.007 | 0.064 ± 0.009 |
+| `early_fusion_robust` (channels stacked) | 3 | 0.817 ± 0.003 | 0.733 ± 0.003 | 0.692 ± 0.006 | 0.637 ± 0.021 | 0.558 ± 0.037 |
+| **`fusion_robust` (two encoders + cross-attention)** | 3 | 0.811 ± 0.004 | **0.742 ± 0.008** | **0.710 ± 0.008** | **0.681 ± 0.008** | 0.644 ± 0.007 |
+| `fusion_concat_robust` (ablation: no cross-attention) | 1 | 0.809 | 0.729 ± 0.003 | 0.686 ± 0.002 | 0.636 ± 0.004 | 0.590 ± 0.014 |
 
-The fusion model pays almost nothing in clear sky (0.813 vs 0.821 optical-only) and keeps
-most of its accuracy as the optical image disappears.
+**The two ± values are not the same quantity.** For the three models trained with three seeds
+it is the spread over **training seeds** — the one that says whether a gap is real. For the
+single-seed models it is only the spread over the **3 synthetic cloud layouts**, so their
+training variance is unmeasured; in clear sky, where no cloud is drawn, they have no spread
+at all.
+
+### What the numbers say
+
+- **`fusion_robust` leads from 40% cloud upwards, and the lead grows.** Against
+  `early_fusion_robust` it is ahead by 0.010 at 40%, 0.018 at 60%, 0.044 at 80% and 0.086 at
+  100%. Weighed against the training-seed spread, only the last two are decisive: at 40% the
+  gap is about the size of the two models' own seed spreads (± 0.008 and ± 0.003), while at
+  80% and 100% it is two to twelve times larger than either.
+- **It beats radar alone until the optical image is almost gone.** At 80% cloud it is 0.681
+  against 0.656 for `s1_only`, a gap of 0.025 on seed spreads of ± 0.008 and ± 0.004. At 100%
+  the advantage is gone: 0.644 against 0.656, i.e. 0.012 *below* radar-only, a difference of
+  the same order as the seed spread. Fusion buys accuracy across the whole range of partial
+  cloud, not a radar-beating result under total cloud.
+- **It is far steadier across training seeds under heavy cloud.** At 100% opaque its spread is
+  ± 0.007 against ± 0.037 for `early_fusion_robust` — about five times tighter. Early fusion's
+  worst seed is what makes its average fall away; the two-encoder model behaves the same way
+  every time it is trained.
+- **Clear-sky accuracy costs almost nothing.** 0.811 against 0.817 for `early_fusion_robust`,
+  a difference of 0.007 on seed spreads of ± 0.004 and ± 0.003, and 0.821 for the optical-only
+  model.
+- **Cross-attention, not just the two encoders, is what helps under heavy cloud.** The
+  ablation keeps the separate encoders but fuses by concatenation: it trails `fusion_robust`
+  at every cloud level above clear sky, by 0.013 at 40% rising to 0.045 at 80% and 0.055 at
+  100%, which at 80-100% is several times `fusion_robust`'s seed spread. This is **one
+  training seed**, so it is an indication rather than a measured effect.
+
+### What the predictions look like
+
+![Predictions of the robust models under thick and opaque cloud](docs/figures/qualitative.png)
+
+Four test chips at 100% cloud (training seed 0): the optical image as acquired, under thick
+(training) cloud and under opaque cloud; then radar, the label, and each robust model's
+prediction under both cloud types. On the chips dominated by wide, contiguous open water
+(`Mekong_1443339`, `India_900498`, `Sri-Lanka_713926`) `fusion_robust` still traces the river
+under opaque cloud, while `s2_only_robust` breaks down into speckle. `India_747992` is the
+failure case: the flooding there is fragmented across a vegetated, partly built-up landscape
+where water is not cleanly radar-dark, and under opaque cloud **all three robust models,
+`fusion_robust` included, recover only scattered patches** of the labelled water. Radar does
+not rescue every scene — it rescues the ones where water is dark and contiguous in SAR.
 
 ## Why opaque clouds, not the training clouds
 
@@ -63,40 +101,56 @@ The synthetic clouds used in training are semi-transparent: inside the cloud the
 about 20% of the ground signal, and a water index computed under them still separates water
 from land almost as well as in clear sky (measured in
 [docs/cloud_leakage.md](docs/cloud_leakage.md)). A model can therefore learn to see water
-*through* them: the optical-only robust model scores 0.79 under 100% of these clouds, but
-0.06 once the same clouds are made fully opaque. Thick-cloud results overstate optical
-robustness, so the headline evaluation uses **opaque** clouds — the same cloud shapes with
-opacity 1, leaving no ground signal — and reports the thick results alongside.
+*through* them: with no radar input at all, `s2_only_robust` scores **0.791** under 100% of
+these clouds on the test split, and **0.064** once the same cloud masks are made fully opaque
+(Bolivia: 0.783 against 0.051). A model with no way of seeing the ground cannot be 0.79
+accurate, so that number measures leakage, not robustness. Thick-cloud results therefore
+overstate optical robustness, and the headline evaluation uses **opaque** clouds — the same
+cloud shapes with opacity 1, leaving no ground signal — with the thick results reported
+alongside in [docs/results/summary.md](docs/results/summary.md).
 
 ## Status
 
 - **Done:** data pipeline and normalisation; U-Net baselines (radar-only, optical-only, early
   fusion); FusionNet (two encoders + cross-attention); robustness training (synthetic clouds
-  + modality dropout); robustness evaluation on test and Bolivia (seed 0, in
-  [docs/results/](docs/results/)); full-data audit of the s2cloudless cloud masks
-  ([docs/cloud_audit.md](docs/cloud_audit.md)).
-- **In progress:** training seeds 1–2 for the main models and a concat-fusion ablation
-  (`fusion_concat_robust`, seeds 0–2) — run plan and rough GPU times in
-  [docs/ROADMAP.md](docs/ROADMAP.md); then final multi-seed results, and a small demo that
-  runs a trained model on a chosen scene.
+  + modality dropout); **final robustness evaluation on test and Bolivia** — 14 runs over 8
+  configurations, with 3 training seeds for `s1_only`, `early_fusion_robust` and
+  `fusion_robust` ([docs/results/](docs/results/)); full-data audit of the s2cloudless cloud
+  masks ([docs/cloud_audit.md](docs/cloud_audit.md)); an interactive demo (`app/`, Gradio)
+  and a static build of it (`static_demo/`).
+- **Next:** the write-up. Figures and tables are final; nothing below is awaiting a run.
 
 ## Limitations
 
-- **Single training seed.** Every number above is one training run per model; the ± spread in
-  `docs/results/` covers only the random cloud layouts, not training variance.
-- **Labels are missing under real clouds.** The human annotators could not see through
-  clouds either: on the test split about half of the really-cloudy pixels are unlabelled and
-  very few are labelled water (3.3%, against 12.9% of clear pixels). Scores on really-cloudy images therefore only reflect the
-  visible parts — which is why the synthetic opaque clouds, applied over fully labelled
-  clear scenes, are the main experiment and the real-cloud tables are supporting evidence.
+- **Bolivia is small and noisy.** The held-out region has only 15 chips, and its rankings
+  disagree with the test split under heavy cloud. At 100% opaque cloud `fusion_robust` scores
+  0.579 ± 0.034 there — above `early_fusion_robust` (0.462 ± 0.155, the widest seed spread
+  anywhere in the evaluation) but **below radar-only** (`s1_only` 0.659 ± 0.043). The
+  single-seed `fusion_concat_robust` reaches 0.643 on Bolivia, reversing the ordering it has
+  on test. With 15 chips these differences are not separable from sampling noise, so Bolivia
+  supports the generalisation question only weakly.
+- **Only three configurations have more than one training seed.** `s2_only_robust`,
+  `fusion_concat_robust` and the three non-robust baselines are one run each, so their ±
+  covers the cloud layouts alone. The cross-attention ablation in particular rests on a
+  single seed.
+- **Labels are missing under real clouds.** The human annotators could not see through clouds
+  either: on the test split about half of the really-cloudy pixels are unlabelled and very few
+  are labelled water (3.3%, against 12.9% of clear pixels). Scores on really-cloudy images
+  therefore only reflect the visible parts — which is why the synthetic opaque clouds, applied
+  over fully labelled clear scenes, are the main experiment and the real-cloud bins
+  ([real_cloud_bins.png](docs/figures/real_cloud_bins.png)) are **supporting evidence only**.
+  The cloudiest bin holds 11 test chips, 9 once the flagged ones are excluded.
 - **The cloud detector itself fails on some chips.** On 10 chips (mostly from the Paraguay
   flood) s2cloudless reports ~100% cloud over plainly visible ground, traced to an elevated
-  cirrus band (B10) in the source data; these chips are flagged and all real-cloud tables
-  are reported with and without them. The detector also over-flags haze and bright bare
-  ground at its default threshold; a stricter-threshold variant is provided as a sensitivity
-  check ([docs/cloud_audit.md](docs/cloud_audit.md)).
-- **Bolivia is small.** The held-out region has only 15 chips, so its numbers are noisy and
-  its model ranking can disagree with the test split at single coverages.
+  cirrus band (B10) in the source data; 2 of them are in the test split
+  (`Paraguay_913449`, `Sri-Lanka_1049830`) and every real-cloud table is reported with and
+  without them. The detector also over-flags haze and bright bare ground at its default
+  threshold; a stricter-threshold variant is provided as a sensitivity check
+  ([docs/cloud_audit.md](docs/cloud_audit.md)).
+- **Synthetic clouds are not real clouds.** They carry no shadows and no surrounding haze, and
+  the opaque variant is deliberately harsher than most real cloud. It is a controlled stress
+  test of how much the model leans on the optical image, not a forecast of accuracy over a
+  real overcast flood.
 
 ## Repository layout
 
@@ -119,7 +173,9 @@ configs/           one YAML per experiment, plus band_stats.json (normalisation 
 notebooks/         thin Colab launchers: 00 download data, 01 stats, 02 cloud cover, 03 train,
                    04 robustness evaluation, 05 cloud-mask audit (CPU)
 tests/             pytest suite on tiny synthetic GeoTIFFs (never the real dataset)
-docs/              ROADMAP.md, label and cloud-cover tables, figures
+app/               interactive Gradio demo (Hugging Face Space); weights are not in git
+static_demo/       precomputed, server-free build of the same demo (static Space)
+docs/              ROADMAP.md, results tables, cloud-cover tables, figures
 ```
 
 Data, checkpoints and W&B run folders are not in git. They live on Google Drive, and their

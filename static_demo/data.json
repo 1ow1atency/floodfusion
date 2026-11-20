@@ -1,6 +1,6 @@
 {
- "generated": "2026-11-20T19:50:56+00:00",
- "git_commit": "37e344efa2fe3678cd2598b3db636f6790e6015c",
+ "generated": "2026-11-20T20:16:47+00:00",
+ "git_commit": "bcb490619b72bd3c1eacb65c7efc32bcefdebf09",
  "split": "test",
  "rule": "test split; s2cloudless cloud fraction <= 1% with a reliable mask and fully valid S2; water >= 5% of labelled pixels; round-robin over regions (ordered by their wettest candidate), within a region by descending water fraction, until 8 chips",
  "smoke": false,
@@ -45,14 +45,17 @@
  "headline": {
   "split": "test",
   "n_chips": 90,
-  "seed": 0,
+  "seeds": {
+   "s2_only_robust": 1,
+   "fusion_robust": 3
+  },
   "clean": {
    "s2_only_robust": 0.8212,
-   "fusion_robust": 0.813
+   "fusion_robust": 0.8109
   },
   "opaque_100": {
    "s2_only_robust": 0.064,
-   "fusion_robust": 0.6496
+   "fusion_robust": 0.6444
   }
  },
  "chips": [
