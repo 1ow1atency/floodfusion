@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FloodFusion — cloud-robust flood mapping</title>
+<meta name="description" content="Interactive demo: does fusing Sentinel-1 radar with Sentinel-2 optical imagery keep flood segmentation accurate under clouds?" />
+<style>
+  :root {
+    --bg: #ffffff; --panel: #f7f7f5; --ink: #0b0b0b; --ink-2: #52514e;
+    --line: #e6e5e1; --accent: #1f6fd1; --warn: #a33b1f; --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141413; --panel: #1e1e1c; --ink: #f5f4ef; --ink-2: #b4b2ab;
+      --line: #35342f; --accent: #6aa8f0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: clamp(1.5rem, 1.1rem + 1.8vw, 2.25rem); line-height: 1.2; margin: 0 0 12px; }
+  h2 { font-size: 1.15rem; margin: 36px 0 10px; }
+  p { margin: 0 0 14px; max-width: 72ch; }
+  a { color: var(--accent); }
+  .lede { font-size: 1.05rem; }
+  ul { max-width: 72ch; padding-left: 22px; }
+  .note { color: var(--ink-2); font-size: 0.9rem; }
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: end;
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px 18px; margin: 24px 0 20px;
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field > label { font-size: 0.85rem; font-weight: 600; color: var(--ink-2); }
+  .field.grow { flex: 1 1 320px; min-width: 260px; }
+  select, input[type="range"] { width: 100%; font: inherit; accent-color: var(--accent); }
+  select {
+    padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--ink);
+  }
+  input[type="range"] { height: 28px; }
+  .cover-value { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.1rem; }
+  .panels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  @media (max-width: 1100px) { .panels { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 680px)  { .panels { grid-template-columns: repeat(2, 1fr); } }
+  figure {
+    margin: 0; background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column;
+  }
+  figure img {
+    width: 100%; aspect-ratio: 1 / 1; display: block; image-rendering: pixelated;
+    background: var(--panel);
+  }
+  figcaption { padding: 8px 10px; font-size: 0.82rem; line-height: 1.35; color: var(--ink-2); }
+  figcaption b { color: var(--ink); display: block; font-size: 0.86rem; }
+  .iou { font-variant-numeric: tabular-nums; }
+  .scores { display: flex; flex-wrap: wrap; gap: 10px 24px; margin: 18px 0 6px; }
+  .score {
+    border-left: 4px solid var(--accent); padding: 4px 0 4px 12px; min-width: 240px;
+  }
+  .score .label { font-size: 0.85rem; color: var(--ink-2); }
+  .score .value { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 0 0; font-size: 0.85rem; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .swatch { width: 13px; height: 13px; border-radius: 3px; border: 1px solid var(--line); }
+  .banner {
+    border: 1px solid var(--warn); color: var(--warn); border-radius: var(--radius);
+    padding: 10px 14px; margin: 0 0 20px; font-weight: 600;
+  }
+  footer { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 0.88rem; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.88em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Flood mapping that survives clouds</h1>
+
+  <p class="lede">
+    Floods come with storms, and storms come with clouds — exactly when a flood map is needed,
+    the optical satellite image is often covered. This demo compares two flood-segmentation
+    models from my final-year project on a real flood scene from the
+    <b>Sen1Floods11 test split</b> (never used in training):
+  </p>
+  <ul>
+    <li><b>Optical-only U-Net</b>: sees only the Sentinel-2 optical image.</li>
+    <li><b>FusionNet</b>: fuses the same optical image with Sentinel-1 <b>radar</b> (SAR), which
+      sees through clouds. Both were trained with the same cloud-robustness recipe.</li>
+  </ul>
+  <p>
+    Drag the slider to cover the optical image with <b>synthetic, fully opaque clouds</b>
+    (radar is unaffected — and the flood on the ground doesn't change, so the label stays the
+    truth). The optical-only model loses the water under the clouds; the fusion model keeps
+    finding it from radar. On the full test split (90 chips, seed 0), water IoU at 100% opaque
+    cloud: optical-only <b>0.06</b> vs fusion <b>0.65</b> (0.82 and 0.81 with no clouds).
+  </p>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <div class="controls">
+    <div class="field grow">
+      <label for="chip">Test chip</label>
+      <select id="chip"></select>
+    </div>
+    <div class="field grow">
+      <label for="cover">Synthetic opaque cloud cover of the optical image:
+        <span class="cover-value" id="cover-value">0%</span></label>
+      <input type="range" id="cover" min="0" max="100" step="10" value="0" />
+    </div>
+  </div>
+
+  <div class="panels">
+    <figure>
+      <img id="img-optical" alt="Sentinel-2 optical image with synthetic clouds" />
+      <figcaption><b>Sentinel-2 optical</b>true colour, with synthetic clouds</figcaption>
+    </figure>
+    <figure>
+      <img id="img-sar" alt="Sentinel-1 radar VV backscatter" />
+      <figcaption><b>Sentinel-1 radar (VV)</b>unaffected by clouds</figcaption>
+    </figure>
+    <figure>
+      <img id="img-label" alt="Hand-labelled ground truth" />
+      <figcaption><b>True label</b>what the models should predict</figcaption>
+    </figure>
+    <figure>
+      <img id="img-pred-s2_only_robust" alt="Optical-only model prediction" />
+      <figcaption><b id="title-s2_only_robust">Optical-only U-Net</b>water IoU
+        <span class="iou" id="iou-s2_only_robust">–</span></figcaption>
+    </figure>
+    <figure>
+      <img id="img-pred-fusion_robust" alt="Fusion model prediction" />
+      <figcaption><b id="title-fusion_robust">SAR+optical FusionNet</b>water IoU
+        <span class="iou" id="iou-fusion_robust">–</span></figcaption>
+    </figure>
+  </div>
+
+  <div class="scores" id="scores"></div>
+
+  <div class="legend">
+    <span><i class="swatch" style="background:#1f6fd1"></i> water</span>
+    <span><i class="swatch" style="background:#ffffff"></i> not water</span>
+    <span><i class="swatch" style="background:#9e9e9e"></i> no data (ignored in IoU)</span>
+    <span><i class="swatch" style="background:#ff00ff"></i> missing input pixel</span>
+  </div>
+
+  <p class="note" id="chip-meta"></p>
+
+  <h2>How it works</h2>
+  <p>
+    Both models are U-Net-style segmentation networks with ResNet-34 encoders, trained on the
+    hand-labelled Sen1Floods11 subset. The optical-only baseline takes the 13 Sentinel-2 bands.
+    FusionNet runs a separate encoder per modality — radar (VV, VH) and optical — and fuses them
+    at every scale, with bidirectional cross-attention at the two deepest levels, into one shared
+    decoder. Both were trained with the same robustness recipe: synthetic clouds on the optical
+    image plus random dropout of a whole modality, so the network cannot rely on optical alone.
+  </p>
+  <p>
+    The clouds here are <b>synthetic and fully opaque</b>: inside the cloud mask the ground signal
+    is replaced entirely by a measured cloud spectrum, so nothing of the scene survives
+    underneath. That is the stricter of the two variants in the project's robustness evaluation —
+    real clouds are often semi-transparent, and water sometimes stays faintly visible through
+    them. Each chip's cloud field is seeded from its chip id and does not depend on the coverage,
+    so raising the slider grows the <i>same</i> cloud field instead of drawing a new one.
+    Model selection used the validation split only; these chips are from the test split.
+  </p>
+  <p>
+    <b>Water IoU</b> is the intersection-over-union of the water class on the displayed chip, with
+    unlabelled (<code>no data</code>) pixels ignored. The split-level numbers quoted above pool
+    pixel counts over all 90 test chips, so they are not the average of single-chip values.
+  </p>
+
+  <h2>Precomputed, not live</h2>
+  <p>
+    This is a static page, so there is no model running in your browser. Every panel and every
+    IoU was <b>computed ahead of time by the real trained models</b> (the seed-0
+    <code>best.pt</code> checkpoints), on CPU, for each of the 8 chips at each 10% cloud step, and
+    exported as images by
+    <code>scripts/export_static_demo.py</code>. The page just swaps the matching image in. The
+    numbers are identical to the interactive Gradio version of this demo.
+  </p>
+
+  <footer>
+    <p>
+      Final-year project: cloud-robust flood mapping by fusing Sentinel-1 SAR and Sentinel-2
+      optical imagery. Data: <a href="https://github.com/cloudtostreet/Sen1Floods11">Sen1Floods11</a>
+      v1.1 (hand-labelled subset).
+      Code and full results: <a href="https://github.com/1ow1atency/floodfusion">github.com/1ow1atency/floodfusion</a>.
+    </p>
+    <p class="note" id="provenance"></p>
+  </footer>
+</div>
+
+<script>
+(async function () {
+  const $ = (id) => document.getElementById(id);
+  const pct = (x) => (x * 100).toFixed(0) + "%";
+  const data = await fetch("data.json").then((r) => r.json());
+
+  const chips = data.chips;
+  const byId = new Map(chips.map((c) => [c.chip_id, c]));
+  const modelKeys = data.models.map((m) => m.key);
+
+  for (const m of data.models) {
+    const el = $("title-" + m.key);
+    if (el) el.textContent = m.title;
+  }
+  $("scores").innerHTML = data.models
+    .map((m) => `<div class="score"><div class="label">${m.title}</div>
+       <div class="value"><span id="score-${m.key}">–</span></div>
+       <div class="label">water IoU on this chip</div></div>`)
+    .join("");
+
+  if (data.smoke) {
+    const b = $("banner");
+    b.hidden = false;
+    b.textContent = "Dev export: random weights — these predictions are meaningless.";
+  }
+
+  const chipSel = $("chip");
+  chipSel.innerHTML = chips
+    .map((c) => `<option value="${c.chip_id}">${c.chip_id} (${c.region}, water ${pct(c.water_fraction)} of labelled pixels)</option>`)
+    .join("");
+  chipSel.value = chips[0].chip_id;  // explicit, rather than relying on the first option being selected
+
+  const cover = $("cover");
+  cover.min = Math.min(...data.coverages);
+  cover.max = Math.max(...data.coverages);
+  cover.step = data.coverages.length > 1 ? data.coverages[1] - data.coverages[0] : 10;
+
+  const nearestFrame = (chip, value) =>
+    chip.frames.reduce((a, b) => (Math.abs(b.coverage - value) < Math.abs(a.coverage - value) ? b : a));
+
+  // Keep a decoded copy of every frame of the current chip, so dragging never shows a gap.
+  function preload(chip) {
+    for (const f of chip.frames) {
+      new Image().src = f.optical;
+      for (const k of modelKeys) new Image().src = f.preds[k].image;
+    }
+  }
+
+  function render() {
+    const chip = byId.get(chipSel.value);
+    const frame = nearestFrame(chip, Number(cover.value));
+    $("cover-value").textContent = frame.coverage + "%";
+    $("img-optical").src = frame.optical;
+    $("img-sar").src = chip.sar;
+    $("img-label").src = chip.label;
+    for (const k of modelKeys) {
+      const iou = frame.preds[k].iou;
+      const text = iou === null ? "n/a" : iou.toFixed(3);
+      $("iou-" + k).textContent = text;
+      $("score-" + k).textContent = text;
+      $("img-pred-" + k).src = frame.preds[k].image;
+    }
+    $("chip-meta").textContent =
+      `${chip.chip_id} — ${data.split} split, region ${chip.region}, ` +
+      `water ${pct(chip.water_fraction)} of labelled pixels, real cloud cover ${pct(chip.cloud_fraction)} ` +
+      `(s2cloudless). Chip selection rule: ${data.rule}.`;
+  }
+
+  chipSel.addEventListener("change", () => { render(); preload(byId.get(chipSel.value)); });
+  cover.addEventListener("input", render);
+
+  $("provenance").textContent =
+    `Precomputed ${data.generated.slice(0, 10)} from commit ${(data.git_commit || "").slice(0, 7)} · ` +
+    data.models.map((m) => `${m.key}: best.pt epoch ${m.epoch} (${m.modalities.join("+")})`).join(" · ") +
+    ` · ${data.coverages.length} cloud levels per chip · clouds: ${data.cloud_setting}`;
+
+  render();
+  preload(byId.get(chipSel.value));
+})();
+</script>
+</body>
+</html>

@@ -22,17 +22,14 @@ from pathlib import Path
 import gradio as gr
 import numpy as np
 
-from floodfusion.chips import IGNORE_INDEX
 from floodfusion.demo import (
-    MANIFEST, WEIGHT_FILES, DemoModel, chip_water_iou, load_demo_model, load_packed_chip,
-    make_dev_assets, opaque_cloud_s2, predict,
+    MANIFEST, MODEL_TITLES, WEIGHT_FILES, DemoModel, chip_water_iou, label_panel, load_demo_model,
+    load_packed_chip, make_dev_assets, opaque_cloud_s2, optical_panel, predict, sar_panel,
+    shown_prediction,
 )
-from floodfusion.viz import LABEL_COLOURS, NODATA_RGB, TRUE_COLOUR, TRUE_COLOUR_SCALE, composite
 
 APP_DIR = Path(__file__).resolve().parent
 WEIGHTS_REPO_ENV = "FLOODFUSION_WEIGHTS_REPO"
-MODEL_TITLES = {"s2_only_robust": "Optical-only U-Net (robust)",
-                "fusion_robust": "SAR+optical FusionNet (robust)"}
 SLIDER_STEP = 5  # %; coarse steps keep the prediction cache small and effective
 
 INTRO = """
@@ -57,28 +54,6 @@ keeps finding it from radar. On the full test split (90 chips, seed 0), water Io
 of the project's robustness evaluation; real clouds are often semi-transparent. IoU below
 is for the displayed chip only.*
 """
-
-
-def _to_uint8(rgb: np.ndarray) -> np.ndarray:
-    return (np.clip(rgb, 0.0, 1.0) * 255).round().astype(np.uint8)
-
-
-def sar_panel(s1: np.ndarray, stats: dict) -> np.ndarray:
-    """VV in dB as grayscale with the train clip limits as display range; missing = magenta."""
-    lo, hi = float(stats["s1"]["clip_min"][0]), float(stats["s1"]["clip_max"][0])
-    vv = s1[0]
-    g = np.clip((vv - lo) / (hi - lo), 0.0, 1.0)
-    rgb = np.repeat(np.nan_to_num(g)[..., None], 3, axis=-1)
-    rgb[np.isnan(vv)] = NODATA_RGB
-    return _to_uint8(rgb)
-
-
-def label_panel(values: np.ndarray) -> np.ndarray:
-    """Labels/predictions as RGB: water blue, not water white, ignored (-1) grey."""
-    rgb = np.zeros((*values.shape, 3), np.uint8)
-    for v, colour in LABEL_COLOURS.items():
-        rgb[values == v] = [int(colour[i: i + 2], 16) for i in (1, 3, 5)]
-    return rgb
 
 
 class DemoAssets:
@@ -110,12 +85,12 @@ class DemoAssets:
     def _compute(self, cid: str, coverage_pct: int):
         chip = self.chips[cid]["data"]
         s2_cloudy = opaque_cloud_s2(chip["s2"], coverage_pct / 100.0, cid)
-        optical = _to_uint8(composite(s2_cloudy, TRUE_COLOUR, TRUE_COLOUR_SCALE))
+        optical = optical_panel(s2_cloudy)
         results = {}
         for name, dm in self.models.items():
             pred = predict(dm, chip["s1"], s2_cloudy)
-            shown = np.where(chip["label"] == IGNORE_INDEX, IGNORE_INDEX, pred.astype(np.int64))
-            results[name] = (label_panel(shown), chip_water_iou(pred, chip["label"]))
+            results[name] = (label_panel(shown_prediction(pred, chip["label"])),
+                             chip_water_iou(pred, chip["label"]))
         return optical, results
 
     def view(self, choice: str, coverage_pct: float):

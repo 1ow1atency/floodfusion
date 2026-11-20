@@ -1,0 +1,1372 @@
+{
+ "generated": "2026-11-20T19:50:56+00:00",
+ "git_commit": "37e344efa2fe3678cd2598b3db636f6790e6015c",
+ "split": "test",
+ "rule": "test split; s2cloudless cloud fraction <= 1% with a reliable mask and fully valid S2; water >= 5% of labelled pixels; round-robin over regions (ordered by their wettest candidate), within a region by descending water fraction, until 8 chips",
+ "smoke": false,
+ "coverages": [
+  0,
+  10,
+  20,
+  30,
+  40,
+  50,
+  60,
+  70,
+  80,
+  90,
+  100
+ ],
+ "cloud_setting": "opaque thick synthetic clouds (clouds_synth, opaque_alpha): opacity 1 inside the cloud mask, so no ground signal survives; seeded per chip id, so the same cloud field grows as coverage rises",
+ "label_colours": {
+  "-1": "#9e9e9e",
+  "0": "#ffffff",
+  "1": "#1f6fd1"
+ },
+ "models": [
+  {
+   "key": "s2_only_robust",
+   "title": "Optical-only U-Net (robust)",
+   "epoch": 83,
+   "modalities": [
+    "s2"
+   ]
+  },
+  {
+   "key": "fusion_robust",
+   "title": "SAR+optical FusionNet (robust)",
+   "epoch": 95,
+   "modalities": [
+    "s1",
+    "s2"
+   ]
+  }
+ ],
+ "headline": {
+  "split": "test",
+  "n_chips": 90,
+  "seed": 0,
+  "clean": {
+   "s2_only_robust": 0.8212,
+   "fusion_robust": 0.813
+  },
+  "opaque_100": {
+   "s2_only_robust": 0.064,
+   "fusion_robust": 0.6496
+  }
+ },
+ "chips": [
+  {
+   "chip_id": "Mekong_1443339",
+   "region": "Mekong",
+   "cloud_fraction": 0.0,
+   "water_fraction": 0.7354340320827055,
+   "sar": "img/sar/Mekong_1443339.webp",
+   "label": "img/label/Mekong_1443339.png",
+   "frames": [
+    {
+     "coverage": 0,
+     "optical": "img/optical/Mekong_1443339_c000.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Mekong_1443339_c000.png",
+       "iou": 0.9461
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Mekong_1443339_c000.png",
+       "iou": 0.9452
+      }
+     }
+    },
+    {
+     "coverage": 10,
+     "optical": "img/optical/Mekong_1443339_c010.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Mekong_1443339_c010.png",
+       "iou": 0.8886
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Mekong_1443339_c010.png",
+       "iou": 0.9419
+      }
+     }
+    },
+    {
+     "coverage": 20,
+     "optical": "img/optical/Mekong_1443339_c020.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Mekong_1443339_c020.png",
+       "iou": 0.8179
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Mekong_1443339_c020.png",
+       "iou": 0.9389
+      }
+     }
+    },
+    {
+     "coverage": 30,
+     "optical": "img/optical/Mekong_1443339_c030.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Mekong_1443339_c030.png",
+       "iou": 0.7315
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Mekong_1443339_c030.png",
+       "iou": 0.9352
+      }
+     }
+    },
+    {
+     "coverage": 40,
+     "optical": "img/optical/Mekong_1443339_c040.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Mekong_1443339_c040.png",
+       "iou": 0.6594
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Mekong_1443339_c040.png",
+       "iou": 0.931
+      }
+     }
+    },
+    {
+     "coverage": 50,
+     "optical": "img/optical/Mekong_1443339_c050.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Mekong_1443339_c050.png",
+       "iou": 0.5723
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Mekong_1443339_c050.png",
+       "iou": 0.9274
+      }
+     }
+    },
+    {
+     "coverage": 60,
+     "optical": "img/optical/Mekong_1443339_c060.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Mekong_1443339_c060.png",
+       "iou": 0.4726
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Mekong_1443339_c060.png",
+       "iou": 0.9244
+      }
+     }
+    },
+    {
+     "coverage": 70,
+     "optical": "img/optical/Mekong_1443339_c070.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Mekong_1443339_c070.png",
+       "iou": 0.3655
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Mekong_1443339_c070.png",
+       "iou": 0.921
+      }
+     }
+    },
+    {
+     "coverage": 80,
+     "optical": "img/optical/Mekong_1443339_c080.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Mekong_1443339_c080.png",
+       "iou": 0.2763
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Mekong_1443339_c080.png",
+       "iou": 0.9167
+      }
+     }
+    },
+    {
+     "coverage": 90,
+     "optical": "img/optical/Mekong_1443339_c090.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Mekong_1443339_c090.png",
+       "iou": 0.1771
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Mekong_1443339_c090.png",
+       "iou": 0.9138
+      }
+     }
+    },
+    {
+     "coverage": 100,
+     "optical": "img/optical/Mekong_1443339_c100.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Mekong_1443339_c100.png",
+       "iou": 0.0098
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Mekong_1443339_c100.png",
+       "iou": 0.9103
+      }
+     }
+    }
+   ]
+  },
+  {
+   "chip_id": "Spain_5650136",
+   "region": "Spain",
+   "cloud_fraction": 0.000885,
+   "water_fraction": 0.6072810555024593,
+   "sar": "img/sar/Spain_5650136.webp",
+   "label": "img/label/Spain_5650136.png",
+   "frames": [
+    {
+     "coverage": 0,
+     "optical": "img/optical/Spain_5650136_c000.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_5650136_c000.png",
+       "iou": 0.9343
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_5650136_c000.png",
+       "iou": 0.9334
+      }
+     }
+    },
+    {
+     "coverage": 10,
+     "optical": "img/optical/Spain_5650136_c010.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_5650136_c010.png",
+       "iou": 0.8214
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_5650136_c010.png",
+       "iou": 0.9111
+      }
+     }
+    },
+    {
+     "coverage": 20,
+     "optical": "img/optical/Spain_5650136_c020.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_5650136_c020.png",
+       "iou": 0.6967
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_5650136_c020.png",
+       "iou": 0.8975
+      }
+     }
+    },
+    {
+     "coverage": 30,
+     "optical": "img/optical/Spain_5650136_c030.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_5650136_c030.png",
+       "iou": 0.6112
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_5650136_c030.png",
+       "iou": 0.8912
+      }
+     }
+    },
+    {
+     "coverage": 40,
+     "optical": "img/optical/Spain_5650136_c040.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_5650136_c040.png",
+       "iou": 0.5317
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_5650136_c040.png",
+       "iou": 0.8829
+      }
+     }
+    },
+    {
+     "coverage": 50,
+     "optical": "img/optical/Spain_5650136_c050.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_5650136_c050.png",
+       "iou": 0.4288
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_5650136_c050.png",
+       "iou": 0.8761
+      }
+     }
+    },
+    {
+     "coverage": 60,
+     "optical": "img/optical/Spain_5650136_c060.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_5650136_c060.png",
+       "iou": 0.2959
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_5650136_c060.png",
+       "iou": 0.8685
+      }
+     }
+    },
+    {
+     "coverage": 70,
+     "optical": "img/optical/Spain_5650136_c070.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_5650136_c070.png",
+       "iou": 0.1907
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_5650136_c070.png",
+       "iou": 0.8622
+      }
+     }
+    },
+    {
+     "coverage": 80,
+     "optical": "img/optical/Spain_5650136_c080.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_5650136_c080.png",
+       "iou": 0.1234
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_5650136_c080.png",
+       "iou": 0.8599
+      }
+     }
+    },
+    {
+     "coverage": 90,
+     "optical": "img/optical/Spain_5650136_c090.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_5650136_c090.png",
+       "iou": 0.0769
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_5650136_c090.png",
+       "iou": 0.8593
+      }
+     }
+    },
+    {
+     "coverage": 100,
+     "optical": "img/optical/Spain_5650136_c100.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_5650136_c100.png",
+       "iou": 0.0178
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_5650136_c100.png",
+       "iou": 0.8594
+      }
+     }
+    }
+   ]
+  },
+  {
+   "chip_id": "India_399883",
+   "region": "India",
+   "cloud_fraction": 0.00013,
+   "water_fraction": 0.5199623071963497,
+   "sar": "img/sar/India_399883.webp",
+   "label": "img/label/India_399883.png",
+   "frames": [
+    {
+     "coverage": 0,
+     "optical": "img/optical/India_399883_c000.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_399883_c000.png",
+       "iou": 0.9279
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_399883_c000.png",
+       "iou": 0.9291
+      }
+     }
+    },
+    {
+     "coverage": 10,
+     "optical": "img/optical/India_399883_c010.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_399883_c010.png",
+       "iou": 0.8829
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_399883_c010.png",
+       "iou": 0.9182
+      }
+     }
+    },
+    {
+     "coverage": 20,
+     "optical": "img/optical/India_399883_c020.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_399883_c020.png",
+       "iou": 0.8289
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_399883_c020.png",
+       "iou": 0.899
+      }
+     }
+    },
+    {
+     "coverage": 30,
+     "optical": "img/optical/India_399883_c030.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_399883_c030.png",
+       "iou": 0.7539
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_399883_c030.png",
+       "iou": 0.8787
+      }
+     }
+    },
+    {
+     "coverage": 40,
+     "optical": "img/optical/India_399883_c040.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_399883_c040.png",
+       "iou": 0.6805
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_399883_c040.png",
+       "iou": 0.8597
+      }
+     }
+    },
+    {
+     "coverage": 50,
+     "optical": "img/optical/India_399883_c050.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_399883_c050.png",
+       "iou": 0.5869
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_399883_c050.png",
+       "iou": 0.8407
+      }
+     }
+    },
+    {
+     "coverage": 60,
+     "optical": "img/optical/India_399883_c060.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_399883_c060.png",
+       "iou": 0.4956
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_399883_c060.png",
+       "iou": 0.8198
+      }
+     }
+    },
+    {
+     "coverage": 70,
+     "optical": "img/optical/India_399883_c070.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_399883_c070.png",
+       "iou": 0.3892
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_399883_c070.png",
+       "iou": 0.8012
+      }
+     }
+    },
+    {
+     "coverage": 80,
+     "optical": "img/optical/India_399883_c080.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_399883_c080.png",
+       "iou": 0.2885
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_399883_c080.png",
+       "iou": 0.7849
+      }
+     }
+    },
+    {
+     "coverage": 90,
+     "optical": "img/optical/India_399883_c090.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_399883_c090.png",
+       "iou": 0.215
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_399883_c090.png",
+       "iou": 0.7695
+      }
+     }
+    },
+    {
+     "coverage": 100,
+     "optical": "img/optical/India_399883_c100.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_399883_c100.png",
+       "iou": 0.0123
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_399883_c100.png",
+       "iou": 0.7592
+      }
+     }
+    }
+   ]
+  },
+  {
+   "chip_id": "Sri-Lanka_713926",
+   "region": "Sri-Lanka",
+   "cloud_fraction": 0.0,
+   "water_fraction": 0.30715288587736167,
+   "sar": "img/sar/Sri-Lanka_713926.webp",
+   "label": "img/label/Sri-Lanka_713926.png",
+   "frames": [
+    {
+     "coverage": 0,
+     "optical": "img/optical/Sri-Lanka_713926_c000.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Sri-Lanka_713926_c000.png",
+       "iou": 0.9836
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Sri-Lanka_713926_c000.png",
+       "iou": 0.9829
+      }
+     }
+    },
+    {
+     "coverage": 10,
+     "optical": "img/optical/Sri-Lanka_713926_c010.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Sri-Lanka_713926_c010.png",
+       "iou": 0.8903
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Sri-Lanka_713926_c010.png",
+       "iou": 0.9758
+      }
+     }
+    },
+    {
+     "coverage": 20,
+     "optical": "img/optical/Sri-Lanka_713926_c020.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Sri-Lanka_713926_c020.png",
+       "iou": 0.7947
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Sri-Lanka_713926_c020.png",
+       "iou": 0.9708
+      }
+     }
+    },
+    {
+     "coverage": 30,
+     "optical": "img/optical/Sri-Lanka_713926_c030.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Sri-Lanka_713926_c030.png",
+       "iou": 0.7126
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Sri-Lanka_713926_c030.png",
+       "iou": 0.9661
+      }
+     }
+    },
+    {
+     "coverage": 40,
+     "optical": "img/optical/Sri-Lanka_713926_c040.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Sri-Lanka_713926_c040.png",
+       "iou": 0.6336
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Sri-Lanka_713926_c040.png",
+       "iou": 0.9601
+      }
+     }
+    },
+    {
+     "coverage": 50,
+     "optical": "img/optical/Sri-Lanka_713926_c050.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Sri-Lanka_713926_c050.png",
+       "iou": 0.5493
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Sri-Lanka_713926_c050.png",
+       "iou": 0.9513
+      }
+     }
+    },
+    {
+     "coverage": 60,
+     "optical": "img/optical/Sri-Lanka_713926_c060.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Sri-Lanka_713926_c060.png",
+       "iou": 0.4669
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Sri-Lanka_713926_c060.png",
+       "iou": 0.9457
+      }
+     }
+    },
+    {
+     "coverage": 70,
+     "optical": "img/optical/Sri-Lanka_713926_c070.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Sri-Lanka_713926_c070.png",
+       "iou": 0.3827
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Sri-Lanka_713926_c070.png",
+       "iou": 0.9366
+      }
+     }
+    },
+    {
+     "coverage": 80,
+     "optical": "img/optical/Sri-Lanka_713926_c080.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Sri-Lanka_713926_c080.png",
+       "iou": 0.2811
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Sri-Lanka_713926_c080.png",
+       "iou": 0.9286
+      }
+     }
+    },
+    {
+     "coverage": 90,
+     "optical": "img/optical/Sri-Lanka_713926_c090.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Sri-Lanka_713926_c090.png",
+       "iou": 0.1626
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Sri-Lanka_713926_c090.png",
+       "iou": 0.918
+      }
+     }
+    },
+    {
+     "coverage": 100,
+     "optical": "img/optical/Sri-Lanka_713926_c100.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Sri-Lanka_713926_c100.png",
+       "iou": 0.0682
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Sri-Lanka_713926_c100.png",
+       "iou": 0.899
+      }
+     }
+    }
+   ]
+  },
+  {
+   "chip_id": "USA_905409",
+   "region": "USA",
+   "cloud_fraction": 0.0,
+   "water_fraction": 0.16965726691059485,
+   "sar": "img/sar/USA_905409.webp",
+   "label": "img/label/USA_905409.png",
+   "frames": [
+    {
+     "coverage": 0,
+     "optical": "img/optical/USA_905409_c000.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/USA_905409_c000.png",
+       "iou": 0.9716
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/USA_905409_c000.png",
+       "iou": 0.9672
+      }
+     }
+    },
+    {
+     "coverage": 10,
+     "optical": "img/optical/USA_905409_c010.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/USA_905409_c010.png",
+       "iou": 0.6521
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/USA_905409_c010.png",
+       "iou": 0.9554
+      }
+     }
+    },
+    {
+     "coverage": 20,
+     "optical": "img/optical/USA_905409_c020.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/USA_905409_c020.png",
+       "iou": 0.3487
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/USA_905409_c020.png",
+       "iou": 0.9461
+      }
+     }
+    },
+    {
+     "coverage": 30,
+     "optical": "img/optical/USA_905409_c030.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/USA_905409_c030.png",
+       "iou": 0.2033
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/USA_905409_c030.png",
+       "iou": 0.941
+      }
+     }
+    },
+    {
+     "coverage": 40,
+     "optical": "img/optical/USA_905409_c040.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/USA_905409_c040.png",
+       "iou": 0.1554
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/USA_905409_c040.png",
+       "iou": 0.9382
+      }
+     }
+    },
+    {
+     "coverage": 50,
+     "optical": "img/optical/USA_905409_c050.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/USA_905409_c050.png",
+       "iou": 0.1111
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/USA_905409_c050.png",
+       "iou": 0.9347
+      }
+     }
+    },
+    {
+     "coverage": 60,
+     "optical": "img/optical/USA_905409_c060.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/USA_905409_c060.png",
+       "iou": 0.0958
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/USA_905409_c060.png",
+       "iou": 0.9327
+      }
+     }
+    },
+    {
+     "coverage": 70,
+     "optical": "img/optical/USA_905409_c070.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/USA_905409_c070.png",
+       "iou": 0.074
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/USA_905409_c070.png",
+       "iou": 0.9291
+      }
+     }
+    },
+    {
+     "coverage": 80,
+     "optical": "img/optical/USA_905409_c080.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/USA_905409_c080.png",
+       "iou": 0.0443
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/USA_905409_c080.png",
+       "iou": 0.924
+      }
+     }
+    },
+    {
+     "coverage": 90,
+     "optical": "img/optical/USA_905409_c090.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/USA_905409_c090.png",
+       "iou": 0.0149
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/USA_905409_c090.png",
+       "iou": 0.9231
+      }
+     }
+    },
+    {
+     "coverage": 100,
+     "optical": "img/optical/USA_905409_c100.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/USA_905409_c100.png",
+       "iou": 0.0089
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/USA_905409_c100.png",
+       "iou": 0.9259
+      }
+     }
+    }
+   ]
+  },
+  {
+   "chip_id": "Paraguay_232281",
+   "region": "Paraguay",
+   "cloud_fraction": 0.0,
+   "water_fraction": 0.11244583129882812,
+   "sar": "img/sar/Paraguay_232281.webp",
+   "label": "img/label/Paraguay_232281.png",
+   "frames": [
+    {
+     "coverage": 0,
+     "optical": "img/optical/Paraguay_232281_c000.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Paraguay_232281_c000.png",
+       "iou": 0.6192
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Paraguay_232281_c000.png",
+       "iou": 0.5666
+      }
+     }
+    },
+    {
+     "coverage": 10,
+     "optical": "img/optical/Paraguay_232281_c010.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Paraguay_232281_c010.png",
+       "iou": 0.5351
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Paraguay_232281_c010.png",
+       "iou": 0.5034
+      }
+     }
+    },
+    {
+     "coverage": 20,
+     "optical": "img/optical/Paraguay_232281_c020.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Paraguay_232281_c020.png",
+       "iou": 0.5083
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Paraguay_232281_c020.png",
+       "iou": 0.4965
+      }
+     }
+    },
+    {
+     "coverage": 30,
+     "optical": "img/optical/Paraguay_232281_c030.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Paraguay_232281_c030.png",
+       "iou": 0.4825
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Paraguay_232281_c030.png",
+       "iou": 0.4975
+      }
+     }
+    },
+    {
+     "coverage": 40,
+     "optical": "img/optical/Paraguay_232281_c040.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Paraguay_232281_c040.png",
+       "iou": 0.451
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Paraguay_232281_c040.png",
+       "iou": 0.4831
+      }
+     }
+    },
+    {
+     "coverage": 50,
+     "optical": "img/optical/Paraguay_232281_c050.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Paraguay_232281_c050.png",
+       "iou": 0.3765
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Paraguay_232281_c050.png",
+       "iou": 0.4825
+      }
+     }
+    },
+    {
+     "coverage": 60,
+     "optical": "img/optical/Paraguay_232281_c060.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Paraguay_232281_c060.png",
+       "iou": 0.235
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Paraguay_232281_c060.png",
+       "iou": 0.4828
+      }
+     }
+    },
+    {
+     "coverage": 70,
+     "optical": "img/optical/Paraguay_232281_c070.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Paraguay_232281_c070.png",
+       "iou": 0.105
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Paraguay_232281_c070.png",
+       "iou": 0.4822
+      }
+     }
+    },
+    {
+     "coverage": 80,
+     "optical": "img/optical/Paraguay_232281_c080.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Paraguay_232281_c080.png",
+       "iou": 0.0392
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Paraguay_232281_c080.png",
+       "iou": 0.4831
+      }
+     }
+    },
+    {
+     "coverage": 90,
+     "optical": "img/optical/Paraguay_232281_c090.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Paraguay_232281_c090.png",
+       "iou": 0.0202
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Paraguay_232281_c090.png",
+       "iou": 0.4833
+      }
+     }
+    },
+    {
+     "coverage": 100,
+     "optical": "img/optical/Paraguay_232281_c100.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Paraguay_232281_c100.png",
+       "iou": 0.0226
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Paraguay_232281_c100.png",
+       "iou": 0.4844
+      }
+     }
+    }
+   ]
+  },
+  {
+   "chip_id": "Spain_7387658",
+   "region": "Spain",
+   "cloud_fraction": 0.00251,
+   "water_fraction": 0.5838653422728644,
+   "sar": "img/sar/Spain_7387658.webp",
+   "label": "img/label/Spain_7387658.png",
+   "frames": [
+    {
+     "coverage": 0,
+     "optical": "img/optical/Spain_7387658_c000.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_7387658_c000.png",
+       "iou": 0.8565
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_7387658_c000.png",
+       "iou": 0.8558
+      }
+     }
+    },
+    {
+     "coverage": 10,
+     "optical": "img/optical/Spain_7387658_c010.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_7387658_c010.png",
+       "iou": 0.8194
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_7387658_c010.png",
+       "iou": 0.8462
+      }
+     }
+    },
+    {
+     "coverage": 20,
+     "optical": "img/optical/Spain_7387658_c020.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_7387658_c020.png",
+       "iou": 0.7747
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_7387658_c020.png",
+       "iou": 0.837
+      }
+     }
+    },
+    {
+     "coverage": 30,
+     "optical": "img/optical/Spain_7387658_c030.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_7387658_c030.png",
+       "iou": 0.725
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_7387658_c030.png",
+       "iou": 0.8276
+      }
+     }
+    },
+    {
+     "coverage": 40,
+     "optical": "img/optical/Spain_7387658_c040.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_7387658_c040.png",
+       "iou": 0.6698
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_7387658_c040.png",
+       "iou": 0.8162
+      }
+     }
+    },
+    {
+     "coverage": 50,
+     "optical": "img/optical/Spain_7387658_c050.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_7387658_c050.png",
+       "iou": 0.6083
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_7387658_c050.png",
+       "iou": 0.8048
+      }
+     }
+    },
+    {
+     "coverage": 60,
+     "optical": "img/optical/Spain_7387658_c060.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_7387658_c060.png",
+       "iou": 0.545
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_7387658_c060.png",
+       "iou": 0.7942
+      }
+     }
+    },
+    {
+     "coverage": 70,
+     "optical": "img/optical/Spain_7387658_c070.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_7387658_c070.png",
+       "iou": 0.4803
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_7387658_c070.png",
+       "iou": 0.7844
+      }
+     }
+    },
+    {
+     "coverage": 80,
+     "optical": "img/optical/Spain_7387658_c080.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_7387658_c080.png",
+       "iou": 0.3798
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_7387658_c080.png",
+       "iou": 0.7774
+      }
+     }
+    },
+    {
+     "coverage": 90,
+     "optical": "img/optical/Spain_7387658_c090.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_7387658_c090.png",
+       "iou": 0.2506
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_7387658_c090.png",
+       "iou": 0.7681
+      }
+     }
+    },
+    {
+     "coverage": 100,
+     "optical": "img/optical/Spain_7387658_c100.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/Spain_7387658_c100.png",
+       "iou": 0.0388
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/Spain_7387658_c100.png",
+       "iou": 0.7628
+      }
+     }
+    }
+   ]
+  },
+  {
+   "chip_id": "India_900498",
+   "region": "India",
+   "cloud_fraction": 0.0,
+   "water_fraction": 0.4731174997709854,
+   "sar": "img/sar/India_900498.webp",
+   "label": "img/label/India_900498.png",
+   "frames": [
+    {
+     "coverage": 0,
+     "optical": "img/optical/India_900498_c000.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_900498_c000.png",
+       "iou": 0.9087
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_900498_c000.png",
+       "iou": 0.9233
+      }
+     }
+    },
+    {
+     "coverage": 10,
+     "optical": "img/optical/India_900498_c010.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_900498_c010.png",
+       "iou": 0.8723
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_900498_c010.png",
+       "iou": 0.9036
+      }
+     }
+    },
+    {
+     "coverage": 20,
+     "optical": "img/optical/India_900498_c020.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_900498_c020.png",
+       "iou": 0.8389
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_900498_c020.png",
+       "iou": 0.8841
+      }
+     }
+    },
+    {
+     "coverage": 30,
+     "optical": "img/optical/India_900498_c030.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_900498_c030.png",
+       "iou": 0.803
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_900498_c030.png",
+       "iou": 0.8691
+      }
+     }
+    },
+    {
+     "coverage": 40,
+     "optical": "img/optical/India_900498_c040.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_900498_c040.png",
+       "iou": 0.7601
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_900498_c040.png",
+       "iou": 0.8527
+      }
+     }
+    },
+    {
+     "coverage": 50,
+     "optical": "img/optical/India_900498_c050.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_900498_c050.png",
+       "iou": 0.7015
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_900498_c050.png",
+       "iou": 0.8383
+      }
+     }
+    },
+    {
+     "coverage": 60,
+     "optical": "img/optical/India_900498_c060.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_900498_c060.png",
+       "iou": 0.6402
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_900498_c060.png",
+       "iou": 0.8249
+      }
+     }
+    },
+    {
+     "coverage": 70,
+     "optical": "img/optical/India_900498_c070.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_900498_c070.png",
+       "iou": 0.5635
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_900498_c070.png",
+       "iou": 0.8129
+      }
+     }
+    },
+    {
+     "coverage": 80,
+     "optical": "img/optical/India_900498_c080.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_900498_c080.png",
+       "iou": 0.4689
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_900498_c080.png",
+       "iou": 0.7988
+      }
+     }
+    },
+    {
+     "coverage": 90,
+     "optical": "img/optical/India_900498_c090.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_900498_c090.png",
+       "iou": 0.3628
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_900498_c090.png",
+       "iou": 0.7859
+      }
+     }
+    },
+    {
+     "coverage": 100,
+     "optical": "img/optical/India_900498_c100.webp",
+     "preds": {
+      "s2_only_robust": {
+       "image": "img/pred/s2_only_robust/India_900498_c100.png",
+       "iou": 0.1406
+      },
+      "fusion_robust": {
+       "image": "img/pred/fusion_robust/India_900498_c100.png",
+       "iou": 0.777
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

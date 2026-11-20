@@ -31,6 +31,10 @@ the stricter variant of the robustness evaluation). The seed depends only on the
 (``chip_seed``), not on the coverage, so moving the slider grows the *same* cloud field
 instead of redrawing a new one — and every visitor sees identical clouds.
 
+Panels and static export: ``optical_panel`` / ``sar_panel`` / ``label_panel`` render what both
+front-ends show, and ``export_static_demo`` precomputes every (chip, cloud cover) frame as image
+files plus a data.json, for the static page in static_demo/ (no server, no torch at view time).
+
 IoU: per-chip water IoU with label -1 ignored (floodfusion.metrics rules). This is a
 single-chip number for the demo; the reported results pool counts over whole splits.
 """
@@ -42,6 +46,7 @@ import json
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Sequence
 
 import numpy as np
 import torch
@@ -50,7 +55,8 @@ from .chips import IGNORE_INDEX, S2_BANDS, chip_path, load_label, load_raw, mark
 from .clouds_synth import EVAL_CLOUD_SEED, apply_clouds, chip_seed, cloud_params, opaque_alpha
 from .metrics import metrics_from_counts
 from .models import build_model
-from .training import check_modalities, forward_model
+from .training import check_modalities, forward_model, git_info
+from .viz import LABEL_COLOURS, NODATA_RGB, TRUE_COLOUR, TRUE_COLOUR_SCALE, composite
 
 DEMO_SPLIT = "test"
 DEMO_N_CHIPS = 8
@@ -305,3 +311,154 @@ def make_dev_assets(out_dir: str | Path, size: int = 128, n_chips: int = 2,
                     "epoch": 0, "best_val_iou": 0.0, "val_iou": 0.0, "smoke": True}, path)
         weights[name] = path
     return chips_dir, weights
+
+
+# ----------------------------------------------------------------------------- panels
+
+MODEL_TITLES = {"s2_only_robust": "Optical-only U-Net (robust)",
+                "fusion_robust": "SAR+optical FusionNet (robust)"}
+
+
+def to_uint8(rgb: np.ndarray) -> np.ndarray:
+    return (np.clip(rgb, 0.0, 1.0) * 255).round().astype(np.uint8)
+
+
+def optical_panel(s2_raw: np.ndarray) -> np.ndarray:
+    """Raw S2 (13, H, W) as an (H, W, 3) uint8 true-colour image; missing = magenta."""
+    return to_uint8(composite(s2_raw, TRUE_COLOUR, TRUE_COLOUR_SCALE))
+
+
+def sar_panel(s1: np.ndarray, stats: dict) -> np.ndarray:
+    """VV in dB as grayscale with the train clip limits as display range; missing = magenta."""
+    lo, hi = float(stats["s1"]["clip_min"][0]), float(stats["s1"]["clip_max"][0])
+    vv = s1[0]
+    g = np.clip((vv - lo) / (hi - lo), 0.0, 1.0)
+    rgb = np.repeat(np.nan_to_num(g)[..., None], 3, axis=-1)
+    rgb[np.isnan(vv)] = NODATA_RGB
+    return to_uint8(rgb)
+
+
+def label_panel(values: np.ndarray) -> np.ndarray:
+    """Labels/predictions as RGB: water blue, not water white, ignored (-1) grey."""
+    rgb = np.zeros((*values.shape, 3), np.uint8)
+    for v, colour in LABEL_COLOURS.items():
+        rgb[values == v] = _rgb_bytes(colour)
+    return rgb
+
+
+def shown_prediction(pred: np.ndarray, label: np.ndarray) -> np.ndarray:
+    """A prediction with the label's ignored pixels greyed out, as the figures do.
+    Cast first: uint8 would wrap IGNORE_INDEX to 255."""
+    return np.where(label == IGNORE_INDEX, IGNORE_INDEX, pred.astype(np.int64))
+
+
+def _rgb_bytes(colour: str) -> list[int]:
+    return [int(colour[i: i + 2], 16) for i in (1, 3, 5)]
+
+
+# ----------------------------------------------------------------------------- static export
+
+STATIC_COVERAGES: tuple[int, ...] = tuple(range(0, 101, 10))  # percent
+WEBP_QUALITY = 92  # visually near-lossless on these 512 px panels; the whole export stays ~6 MB
+DATA_JSON = "data.json"
+# Headline numbers quoted in both front-ends; from docs/results/summary.md (test split, seed 0).
+HEADLINE = {"split": DEMO_SPLIT, "n_chips": 90, "seed": 0,
+            "clean": {"s2_only_robust": 0.8212, "fusion_robust": 0.8130},
+            "opaque_100": {"s2_only_robust": 0.0640, "fusion_robust": 0.6496}}
+
+
+def _save_rgb(arr: np.ndarray, path: Path, quality: int = WEBP_QUALITY) -> int:
+    from PIL import Image
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.fromarray(arr, mode="RGB").save(path, "WEBP", quality=quality, method=6)
+    return path.stat().st_size
+
+
+def _save_labels(values: np.ndarray, path: Path) -> int:
+    """Label map as a palette PNG (exact colours, a few kB): index i = sorted LABEL_COLOURS key i."""
+    from PIL import Image
+
+    keys = sorted(LABEL_COLOURS)
+    idx = np.zeros(values.shape, np.uint8)
+    for i, k in enumerate(keys):
+        idx[values == k] = i
+    img = Image.fromarray(idx, mode="P")
+    palette = [c for k in keys for c in _rgb_bytes(LABEL_COLOURS[k])]
+    img.putpalette(palette + [0] * (768 - len(palette)))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    img.save(path, "PNG", optimize=True, bits=8)
+    return path.stat().st_size
+
+
+def export_static_demo(chips_dir: str | Path, weight_paths: dict[str, Path], out_dir: str | Path, *,
+                       coverages: Sequence[int] = STATIC_COVERAGES, quality: int = WEBP_QUALITY,
+                       log=print) -> dict:
+    """Precompute every panel of the demo as an image file plus a data.json index, for a
+    static web page (no server, no torch at view time).
+
+    Uses the same chips, checkpoints, opaque cloud settings (``opaque_cloud_s2``) and panel
+    rendering as app/app.py, so a frame here is pixel-identical to the Gradio app's and the
+    IoUs are the same numbers. Returns the data.json contents.
+    """
+    chips_dir, out_dir = Path(chips_dir), Path(out_dir)
+    manifest = json.loads((chips_dir / MANIFEST).read_text())
+    models = {name: load_demo_model(path) for name, path in weight_paths.items()}
+    if not models:
+        raise ValueError("no model weights given")
+    bad = [c for c in coverages if not 0 <= int(c) <= 100]
+    if bad:
+        raise ValueError(f"coverages must be percentages in [0, 100], got {bad}")
+    smoke = any(m.smoke for m in models.values())
+    if smoke:
+        log("WARNING: at least one checkpoint is a SMOKE/dev checkpoint; predictions are meaningless.")
+    stats = next(iter(models.values())).stats
+    total = 0
+    chips_out = []
+    for entry in manifest["chips"]:
+        cid = entry["chip_id"]
+        chip = load_packed_chip(chips_dir / entry["file"])
+        total += _save_rgb(sar_panel(chip["s1"], stats), out_dir / "img" / "sar" / f"{cid}.webp", quality)
+        total += _save_labels(chip["label"], out_dir / "img" / "label" / f"{cid}.png")
+        frames = []
+        for cov in coverages:
+            cov = int(cov)
+            s2_cloudy = opaque_cloud_s2(chip["s2"], cov / 100.0, cid)
+            rel = f"img/optical/{cid}_c{cov:03d}.webp"
+            total += _save_rgb(optical_panel(s2_cloudy), out_dir / rel, quality)
+            preds = {}
+            for name, dm in models.items():
+                pred = predict(dm, chip["s1"], s2_cloudy)
+                p_rel = f"img/pred/{name}/{cid}_c{cov:03d}.png"
+                total += _save_labels(shown_prediction(pred, chip["label"]), out_dir / p_rel)
+                iou = chip_water_iou(pred, chip["label"])
+                preds[name] = {"image": p_rel, "iou": None if np.isnan(iou) else round(float(iou), 4)}
+            frames.append({"coverage": cov, "optical": rel, "preds": preds})
+        chips_out.append({**{k: v for k, v in entry.items() if k != "file"},
+                          "sar": f"img/sar/{cid}.webp", "label": f"img/label/{cid}.png", "frames": frames})
+        log(f"  {cid:<22s} {len(coverages)} cloud levels x {len(models)} model(s)"
+            f"  (IoU {frames[0]['preds'][list(models)[0]]['iou']} clear"
+            f" -> {frames[-1]['preds'][list(models)[0]]['iou']} at {coverages[-1]}%)")
+
+    data = {
+        "generated": _utc_now(), "git_commit": git_info().get("git_commit"),
+        "split": manifest.get("split", DEMO_SPLIT), "rule": manifest["rule"],
+        "smoke": smoke, "coverages": [int(c) for c in coverages],
+        "cloud_setting": ("opaque thick synthetic clouds (clouds_synth, opaque_alpha): opacity 1 inside "
+                          "the cloud mask, so no ground signal survives; seeded per chip id, so the same "
+                          "cloud field grows as coverage rises"),
+        "label_colours": {str(k): LABEL_COLOURS[k] for k in sorted(LABEL_COLOURS)},
+        "models": [{"key": name, "title": MODEL_TITLES.get(name, name), "epoch": dm.epoch,
+                    "modalities": list(dm.mods)} for name, dm in models.items()],
+        "headline": HEADLINE, "chips": chips_out,
+    }
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / DATA_JSON).write_text(json.dumps(data, indent=1) + "\n")
+    log(f"  wrote {out_dir / DATA_JSON}; {total / 1e6:.1f} MB of images")
+    return data
+
+
+def _utc_now() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
