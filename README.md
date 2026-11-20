@@ -213,7 +213,10 @@ python scripts/train.py --config configs/early_fusion.yaml --root data/sen1flood
 The smoke run trains for one epoch of 2 batches and "validates" on 2 train chips. It prints
 a warning because its numbers are not a result. Any config in `configs/` works.
 
-Full training, the robustness evaluation and the cloud-mask audit run on Colab — see
+## Training
+
+Full training, the robustness evaluation and the cloud-mask audit run on Colab (GPU for
+training and evaluation, CPU for the cloud-mask audit) — see
 [docs/colab_setup.md](docs/colab_setup.md) for the notebook workflow and one-time setup.
 
 ## Dataset and citation
