@@ -1,6 +1,6 @@
 # Clone or update the repo in Colab. Shared cell: paste verbatim into every notebook
 # (tests/test_notebooks.py checks the copies match notebooks/colab_clone_cell.py).
-# Uses the Colab secret GITHUB_TOKEN if available (see README "Colab setup"). The token
+# Uses the Colab secret GITHUB_TOKEN if available (see docs/colab_setup.md). The token
 # reaches git only through environment variables: never on the command line, never in
 # .git/config (the remote URL stays token-free), and it is masked in any output.
 import base64, os, subprocess

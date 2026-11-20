@@ -213,32 +213,8 @@ python scripts/train.py --config configs/early_fusion.yaml --root data/sen1flood
 The smoke run trains for one epoch of 2 batches and "validates" on 2 train chips. It prints
 a warning because its numbers are not a result. Any config in `configs/` works.
 
-## Train on Colab
-
-Training runs on a Colab GPU (T4) with `notebooks/03_train.ipynb`.
-
-1. Do the one-time setup in [Colab setup](#colab-setup) below (GitHub token secret).
-2. Run `00_download_data.ipynb` once to put Sen1Floods11 on Google Drive.
-3. Run `01_compute_stats.ipynb` once to compute the normalisation statistics.
-4. In notebook 03, change only the settings cell (config and seed). It trains, resumes
-   automatically after a disconnect, and evaluates `best.pt` on valid, test and bolivia.
-
-Never change hyperparameters based on test or bolivia results.
-
-After all runs are trained and evaluated, `notebooks/04_evaluate.ipynb` runs the robustness
-evaluation (`scripts/robustness_eval.py`) over every run folder and writes `robustness.csv`
-(one row per run), `robustness_by_model.csv`, `summary.md` and figures to
-`floodfusion/results/` on Drive. Runs of one config with different seeds
-(`fusion_robust_seed0`, `_seed1`, ...) are grouped: tables and figures show mean ± std over
-training seeds, with the per-run tables kept. It sweeps cloud coverage for
-thick clouds (as trained) and opaque clouds (the stricter test), and also evaluates with S2
-removed. Expect about 15-25 min on a T4. This is final reporting only.
-
-`notebooks/05_cloud_audit.ipynb` (CPU runtime) audits the s2cloudless masks behind the
-real-cloud bins (`scripts/audit_clouds.py`); this has been run on the full data, with the
-findings in [docs/cloud_audit.md](docs/cloud_audit.md). `scripts/flag_cloud_masks.py` turns
-its `chip_audit.csv` into the `mask_unreliable` flags in `docs/cloud_cover.csv` and the 0.6
-sensitivity file `docs/cloud_cover_t06.csv`.
+Full training, the robustness evaluation and the cloud-mask audit run on Colab — see
+[docs/colab_setup.md](docs/colab_setup.md) for the notebook workflow and one-time setup.
 
 ## Dataset and citation
 
@@ -258,33 +234,3 @@ This project uses the hand-labelled subset of **Sen1Floods11** (v1.1):
   year      = {2020}
 }
 ```
-
-## Colab setup
-
-Notebooks in `notebooks/` are thin Colab launchers. Each one clones (or pulls) this repo into
-`/content/floodfusion` with the shared cell in `notebooks/colab_clone_cell.py`.
-
-### GitHub token (only needed if you make your fork private)
-
-1. On GitHub: Settings → Developer settings → Personal access tokens → Fine-grained tokens →
-   Generate new token. Repository access: *Only select repositories* → `floodfusion`;
-   Permissions: *Contents: Read-only*. Set an expiry date.
-2. In Colab: click the **key icon** (Secrets) in the left sidebar → **Add new secret** →
-   Name `GITHUB_TOKEN`, Value = the token.
-3. Switch **Notebook access** on for that secret. Colab asks again for each new notebook.
-4. Re-run the clone cell.
-
-The token is passed to git only through environment variables. It is never printed (it is
-masked as `***` in error output), never put on the command line and never written to
-`.git/config`. If the secret is missing, the cell prints how to add it and tries a plain
-public clone instead.
-
-### Opening a notebook when the GitHub link does not work
-
-1. Locally: `git pull` so your copy of the repo is up to date.
-2. In Colab: **File → Upload notebook** → pick e.g. `notebooks/02_cloud_cover.ipynb` from your
-   local repo.
-
-The uploaded notebook is a copy saved in your Drive (`Colab Notebooks/`). It does not update
-when the repo changes, so upload it again after notebook changes. The code it runs is always
-the latest, because the clone cell pulls the repo.
