@@ -1,24 +1,34 @@
 # floodfusion
 
 Cloud-robust flood mapping by fusing Sentinel-1 SAR and Sentinel-2 optical imagery with deep
-learning (Sen1Floods11).
+learning (Sen1Floods11). Final-year project.
+
+**[▶ Try the live demo](https://huggingface.co/spaces/1ow1atency/floodfusion-demo)** — slide
+synthetic cloud over a real flood scene and watch the optical-only model lose the water while
+the radar-fusion model keeps mapping it.
+
+**The headline:** under total opaque cloud, the fusion model holds a water IoU of
+**0.644 ± 0.007** on the held-out test split, where an optical-only model trained the same way
+collapses to **0.064**. It gives up 0.010 IoU in clear sky to get there.
 
 ## What this project is
 
 Floods are mapped from satellites, but ordinary (optical) satellite photos cannot see through
 clouds — and floods happen in exactly the cloudy, rainy weather that hides them. Radar
 satellites (Sentinel-1 SAR) see through clouds day and night, but their images are grainier
-and harder to read, so flood maps from radar alone are less accurate. This project trains a
-deep learning model that reads both images of the same place at once: each image type gets
-its own encoder (feature extractor), and the two exchange information through cross-attention
-(each side learns what to take from the other) before a flood map is produced. The aim is a
-model as accurate as an optical one in clear sky that keeps working as clouds cover the
-scene. It is trained and tested on the public Sen1Floods11 dataset — 446 hand-labelled
-satellite scenes from 11 real flood events across six continents — and one flood (Bolivia)
-is held out entirely: the model is evaluated there but never trained or tuned on it. Cloud
-robustness is measured by covering the optical image with computer-generated (synthetic)
-clouds of growing coverage at test time, so the same scene can be scored from 0% to 100%
-cloud.
+and harder to read, so flood maps from radar alone are less accurate.
+
+This project trains a deep learning model that reads both images of the same place at once:
+each image type gets its own encoder (feature extractor), and the two exchange information
+through cross-attention (each side learns what to take from the other) before a flood map is
+produced. The aim is a model as accurate as an optical one in clear sky that keeps working as
+clouds cover the scene.
+
+It is trained and tested on the public Sen1Floods11 dataset — 446 hand-labelled satellite
+scenes from 11 real flood events across six continents — and one flood (Bolivia) is held out
+entirely: the model is evaluated there but never trained or tuned on it. Cloud robustness is
+measured by covering the optical image with computer-generated (synthetic) clouds of growing
+coverage at test time, so the same scene can be scored from 0% to 100% cloud.
 
 ```mermaid
 flowchart LR
@@ -116,8 +126,9 @@ alongside in [docs/results/summary.md](docs/results/summary.md).
   + modality dropout); **final robustness evaluation on test and Bolivia** — 14 runs over 8
   configurations, with 3 training seeds for `s1_only`, `early_fusion_robust` and
   `fusion_robust` ([docs/results/](docs/results/)); full-data audit of the s2cloudless cloud
-  masks ([docs/cloud_audit.md](docs/cloud_audit.md)); an interactive demo (`app/`, Gradio)
-  and a static build of it (`static_demo/`).
+  masks ([docs/cloud_audit.md](docs/cloud_audit.md)); an interactive demo (`app/`, Gradio) and
+  the precomputed static build behind the
+  [live Space](https://huggingface.co/spaces/1ow1atency/floodfusion-demo) (`static_demo/`).
 - **Next:** the write-up. Figures and tables are final; nothing below is awaiting a run.
 
 ## Limitations
@@ -253,7 +264,7 @@ This project uses the hand-labelled subset of **Sen1Floods11** (v1.1):
 Notebooks in `notebooks/` are thin Colab launchers. Each one clones (or pulls) this repo into
 `/content/floodfusion` with the shared cell in `notebooks/colab_clone_cell.py`.
 
-### GitHub token (needed while the repo is not publicly visible)
+### GitHub token (only needed if you make your fork private)
 
 1. On GitHub: Settings → Developer settings → Personal access tokens → Fine-grained tokens →
    Generate new token. Repository access: *Only select repositories* → `floodfusion`;
